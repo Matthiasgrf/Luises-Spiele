@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITEL}}</title>
+<style>
+  /* Farben des Spiels – hier lässt sich das Aussehen schnell ändern. */
+  :root {
+    color-scheme: light;
+    --himmel: #dff1fb;
+    --grund: #fdf9f0;
+    --karte: #ffffff;
+    --tinte: #2f3355;
+    --tinte-leise: #5a5f80;
+    --rand: #ddd5c3;
+    --blau: #2f6fb0;
+    --blau-dunkel: #24588d;
+    --gruen: #2e8b4e;
+    --gruen-hell: #dff2df;
+    --orange-hell: #ffeccf;
+    --orange: #b3541e;
+    --sonne: #ffd85e;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    background: linear-gradient(var(--himmel), var(--grund) 45%);
+    color: var(--tinte);
+    font-family: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    font-size: 1.25rem; line-height: 1.4;
+    display: flex; justify-content: center;
+  }
+  .bildschirm {
+    width: 100%; max-width: 720px; min-height: 100vh; min-height: 100dvh;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  }
+  .bildschirm[hidden] { display: none; }
+  .mitte { justify-content: center; }
+  h1 { margin: 0; font-size: clamp(2rem, 8vw, 3rem); line-height: 1.15; text-wrap: balance; }
+  p { margin: 0; }
+  .gross-bild { font-size: clamp(4.5rem, 22vw, 7rem); line-height: 1.1; }
+  .leise { color: var(--tinte-leise); }
+
+  /* Knöpfe und Links */
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  .knopf {
+    min-height: 68px; padding: 14px 34px; border: 0; border-radius: 999px;
+    background: var(--blau); color: #fff; font-size: 1.5rem; font-weight: 700;
+    box-shadow: 0 5px 0 var(--blau-dunkel);
+  }
+  .knopf:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--blau-dunkel); }
+  .knopf.start { min-height: 84px; padding: 16px 48px; font-size: 1.9rem; background: var(--gruen); box-shadow: 0 5px 0 #1f6337; }
+  .heim {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 8px 18px;
+    border: 2px solid var(--rand); border-radius: 999px; background: var(--karte);
+    color: var(--tinte); font-size: 1.05rem; font-weight: 700; text-decoration: none; white-space: nowrap;
+  }
+  .heim:active { transform: translateY(2px); }
+  a:focus-visible, button:focus-visible { outline: 4px solid var(--sonne); outline-offset: 3px; }
+
+  /* Spiel-Bildschirm */
+  .leiste { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .fortschritt { font-weight: 700; white-space: nowrap; }
+  .balken { width: 100%; height: 14px; border-radius: 999px; background: var(--karte); border: 2px solid var(--rand); overflow: hidden; }
+  .balken div { height: 100%; width: 0; background: var(--sonne); transition: width 0.3s ease; }
+  .frage-karte {
+    width: 100%; padding: 18px; border-radius: 26px; background: var(--karte); border: 2px solid var(--rand);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .frage-zeile { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .frage-zeile h2 { margin: 0; font-size: clamp(1.4rem, 5.5vw, 1.9rem); line-height: 1.2; text-wrap: balance; }
+  .vorlesen {
+    flex: none; width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--rand);
+    background: var(--himmel); font-size: 1.7rem; line-height: 1; padding: 0;
+  }
+  .vorlesen:active { transform: translateY(2px); }
+  .frage-bild { font-size: clamp(2.6rem, 12vw, 4rem); line-height: 1.25; word-break: break-word; }
+  .frage-bild:empty { display: none; }
+  .antworten { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 12px; }
+  .antwort {
+    min-height: 88px; padding: 10px 14px; border-radius: 22px; border: 3px solid var(--rand);
+    background: var(--karte); font-size: clamp(1.6rem, 7vw, 2.2rem); font-weight: 700; line-height: 1.15;
+    box-shadow: 0 4px 0 var(--rand);
+  }
+  .antwort:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--rand); }
+  .antwort.richtig { background: var(--gruen-hell); border-color: var(--gruen); box-shadow: none; color: var(--tinte); opacity: 1; }
+  .antwort.falsch { background: var(--orange-hell); border-color: #e7b98c; box-shadow: none; opacity: 0.6; animation: wackeln 0.35s; }
+  .antwort:disabled { cursor: default; }
+  .antwort:disabled:not(.richtig):not(.falsch) { opacity: 0.5; box-shadow: none; }
+  @keyframes wackeln { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .rueckmeldung { min-height: 3.2em; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem; }
+  .rueckmeldung.gut { color: var(--gruen); }
+  .rueckmeldung.nochmal { color: var(--orange); }
+  #weiter[hidden] { display: none; }
+
+  /* End-Bildschirm */
+  .sterne { max-width: 100%; display: flex; flex-wrap: wrap; justify-content: center; font-size: clamp(1.4rem, 6.4vw, 2.6rem); line-height: 1.3; }
+  .sterne .leer { filter: grayscale(1); opacity: 0.3; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .antwort.falsch { animation: none; }
+    .balken div { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. Start-Bildschirm -->
+<main class="bildschirm mitte" id="start">
+  <div class="gross-bild" aria-hidden="true">🎈</div>
+  <h1>{{TITEL}}</h1>
+  <p class="leise" id="rekord" hidden></p>
+  <button class="knopf start" id="los" type="button">▶ Los!</button>
+  <a class="heim" href="../../">🏠 Alle Spiele</a>
+</main>
+
+<!-- 2. Spiel-Bildschirm -->
+<main class="bildschirm" id="spiel" hidden>
+  <div class="leiste">
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+    <span class="fortschritt" id="fortschritt" aria-live="polite"></span>
+  </div>
+  <div class="balken" aria-hidden="true"><div id="balken"></div></div>
+  <div class="frage-karte">
+    <div class="frage-zeile">
+      <h2 id="frage"></h2>
+      <button class="vorlesen" id="vorlesen" type="button" aria-label="Frage vorlesen">🔊</button>
+    </div>
+    <div class="frage-bild" id="bild" aria-hidden="true"></div>
+  </div>
+  <div class="antworten" id="antworten"></div>
+  <p class="rueckmeldung" id="rueckmeldung" role="status" aria-live="polite"></p>
+  <button class="knopf" id="weiter" type="button" hidden>Weiter ➡️</button>
+</main>
+
+<!-- 3. End-Bildschirm -->
+<main class="bildschirm mitte" id="ende" hidden>
+  <div class="gross-bild" aria-hidden="true">🎉</div>
+  <h1>Geschafft!</h1>
+  <div class="sterne" id="sterne" aria-hidden="true"></div>
+  <p id="ergebnis"></p>
+  <button class="knopf start" id="nochmal" type="button">🔁 Nochmal spielen</button>
+  <a class="heim" href="../../">🏠 Alle Spiele</a>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Inhalt des Spiels ---------- */
+
+  // Eigener Speicher-Schlüssel für dieses Spiel. Jedes Spiel braucht einen anderen.
+  const SPEICHER = 'lernspiele.{{ORDNER}}';
+
+  // Sollen die Fragen bei jedem Durchgang in neuer Reihenfolge kommen?
+  const MISCHEN = false;
+
+  // TODO: Diese Beispiel-Fragen durch eigene ersetzen (am besten 10 Stück).
+  //   frage       wird angezeigt und vorgelesen – kurz und einfach
+  //   bild        Emojis zur Frage (darf leer sein: '')
+  //   antworten   2 bis 4 Antworten: Emoji, Zahl oder ein kurzes Wort
+  //   richtig     Nummer der richtigen Antwort, die erste hat die Nummer 0
+  //   erklaerung  ein kurzer Satz, der nach der richtigen Antwort kommt
+  const FRAGEN = [
+    { frage: 'Welches Tier macht Muh?', bild: '', antworten: ['🐶', '🐮', '🐱'], richtig: 1, erklaerung: 'Genau! Die Kuh macht Muh.' },
+    { frage: 'Wie viele Äpfel sind es?', bild: '🍎🍎', antworten: ['1', '2', '3'], richtig: 1, erklaerung: 'Richtig! Es sind 2 Äpfel.' },
+    { frage: 'Was ist gelb?', bild: '', antworten: ['🍌', '🍓', '🥒'], richtig: 0, erklaerung: 'Ja! Die Banane ist gelb.' },
+  ];
+
+  const NOCHMAL_TEXTE = ['Fast! Versuch es noch einmal.', 'Noch nicht ganz. Probier es noch mal!', 'Schau noch einmal genau hin.'];
+
+  /* ---------- Helfer ---------- */
+
+  const $ = (id) => document.getElementById(id);
+  const bildschirme = ['start', 'spiel', 'ende'];
+  function zeige(name) {
+    bildschirme.forEach((b) => { $(b).hidden = b !== name; });
+    window.scrollTo(0, 0);
+  }
+
+  // Vorlesen mit der Stimme des Geräts (ohne Internet). Fehlt sie, bleibt das Spiel still.
+  const stimme = window.speechSynthesis || null;
+  function sprich(text) {
+    if (!stimme || !window.SpeechSynthesisUtterance) return;
+    try {
+      stimme.cancel();
+      const s = new SpeechSynthesisUtterance(text);
+      s.lang = 'de-DE';
+      s.rate = 0.9;
+      stimme.speak(s);
+    } catch (e) { /* ohne Stimme weiterspielen */ }
+  }
+
+  // Kleine Töne für richtig und falsch.
+  let audio = null;
+  function ton(frequenz, dauer, wann) {
+    if (!audio) return;
+    try {
+      const t = audio.currentTime + (wann || 0);
+      const o = audio.createOscillator();
+      const g = audio.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(frequenz, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + dauer + 0.05);
+    } catch (e) { /* ohne Ton weiterspielen */ }
+  }
+
+  function ladeRekord() {
+    try { return JSON.parse(localStorage.getItem(SPEICHER) || '{}').rekord || 0; } catch (e) { return 0; }
+  }
+  function merkeRekord(sterne) {
+    try { if (sterne > ladeRekord()) localStorage.setItem(SPEICHER, JSON.stringify({ rekord: sterne })); } catch (e) { /* egal */ }
+  }
+  function zeigeRekord() {
+    const r = ladeRekord();
+    $('rekord').hidden = r < 1;
+    $('rekord').textContent = 'Dein Rekord: ' + r + ' ⭐';
+  }
+
+  /* ---------- Spielablauf ---------- */
+
+  let reihenfolge = [];
+  let nummer = 0;       // Nummer der aktuellen Frage, ab 0
+  let sterne = 0;       // richtig beim ersten Versuch
+  let ersterVersuch = true;
+  let geloest = false;
+
+  function starte() {
+    if (!audio) {
+      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+    }
+    reihenfolge = FRAGEN.map((_, i) => i);
+    if (MISCHEN) {
+      for (let i = reihenfolge.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [reihenfolge[i], reihenfolge[j]] = [reihenfolge[j], reihenfolge[i]];
+      }
+    }
+    nummer = 0;
+    sterne = 0;
+    zeige('spiel');
+    zeigeFrage();
+  }
+
+  function aktuelle() { return FRAGEN[reihenfolge[nummer]]; }
+
+  function zeigeFrage() {
+    const f = aktuelle();
+    ersterVersuch = true;
+    geloest = false;
+    $('fortschritt').textContent = 'Frage ' + (nummer + 1) + ' / ' + FRAGEN.length;
+    $('balken').style.width = (nummer / FRAGEN.length * 100) + '%';
+    $('frage').textContent = f.frage;
+    $('bild').textContent = f.bild || '';
+    $('rueckmeldung').textContent = '';
+    $('rueckmeldung').className = 'rueckmeldung';
+    $('weiter').hidden = true;
+    const feld = $('antworten');
+    feld.textContent = '';
+    f.antworten.forEach((text, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'antwort';
+      b.textContent = text;
+      b.addEventListener('click', () => antworte(i, b));
+      feld.appendChild(b);
+    });
+    sprich(f.frage);
+  }
+
+  function antworte(i, knopf) {
+    if (geloest || knopf.disabled) return;
+    const f = aktuelle();
+    const meldung = $('rueckmeldung');
+    if (i !== f.richtig) {
+      // Falsch: freundlich bleiben, die Antwort sperren, neuer Versuch.
+      ersterVersuch = false;
+      knopf.disabled = true;
+      knopf.classList.add('falsch');
+      const text = NOCHMAL_TEXTE[Math.floor(Math.random() * NOCHMAL_TEXTE.length)];
+      meldung.textContent = '💪 ' + text;
+      meldung.className = 'rueckmeldung nochmal';
+      ton(220, 0.25);
+      sprich(text);
+      return;
+    }
+    // Richtig: kurze Erklärung, dann weiter.
+    geloest = true;
+    if (ersterVersuch) sterne++;
+    [...$('antworten').children].forEach((b) => { b.disabled = true; });
+    knopf.classList.add('richtig');
+    meldung.textContent = '✅ ' + f.erklaerung;
+    meldung.className = 'rueckmeldung gut';
+    [523.25, 659.25, 783.99].forEach((hz, k) => ton(hz, 0.3, k * 0.1));
+    sprich(f.erklaerung);
+    $('balken').style.width = ((nummer + 1) / FRAGEN.length * 100) + '%';
+    const weiter = $('weiter');
+    weiter.textContent = nummer + 1 < FRAGEN.length ? 'Weiter ➡️' : 'Fertig 🎉';
+    weiter.hidden = false;
+    weiter.focus({ preventScroll: true });
+    weiter.scrollIntoView({ block: 'nearest' });
+  }
+
+  function weiter() {
+    if (!geloest) return;
+    nummer++;
+    if (nummer < FRAGEN.length) zeigeFrage();
+    else zeigeEnde();
+  }
+
+  function zeigeEnde() {
+    merkeRekord(sterne);
+    const feld = $('sterne');
+    feld.textContent = '';
+    FRAGEN.forEach((_, i) => {
+      const s = document.createElement('span');
+      s.textContent = '⭐';
+      if (i >= sterne) s.className = 'leer';
+      feld.appendChild(s);
+    });
+    const text = sterne === FRAGEN.length
+      ? 'Super! Alles beim ersten Mal richtig!'
+      : 'Du hast ' + sterne + ' von ' + FRAGEN.length + ' Sternen gesammelt.';
+    $('ergebnis').textContent = text;
+    zeige('ende');
+    [523.25, 587.33, 659.25, 783.99, 1046.5].forEach((hz, k) => ton(hz, 0.35, k * 0.13));
+    sprich('Geschafft! ' + text);
+    $('nochmal').focus({ preventScroll: true });
+  }
+
+  /* ---------- Eingabe ---------- */
+
+  $('los').addEventListener('click', starte);
+  $('nochmal').addEventListener('click', starte);
+  $('weiter').addEventListener('click', weiter);
+  $('vorlesen').addEventListener('click', () => sprich(aktuelle().frage));
+
+  // Tastatur: Zahlen 1–4 wählen eine Antwort. Enter und Leertaste drücken den Knopf, der gerade markiert ist.
+  window.addEventListener('keydown', (e) => {
+    if ($('spiel').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    const zahl = Number(e.key);
+    const knoepfe = $('antworten').children;
+    if (zahl >= 1 && zahl <= knoepfe.length) knoepfe[zahl - 1].click();
+  });
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden && stimme) stimme.cancel(); });
+
+  zeigeRekord();
+  // Nach „Nochmal spielen“ soll der Rekord auf dem Start-Bildschirm stimmen, wenn man später zurückkommt.
+  window.addEventListener('pageshow', zeigeRekord);
+})();
+</script>
+</body>
+</html>
