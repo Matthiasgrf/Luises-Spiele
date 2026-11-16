@@ -1,0 +1,38 @@
+name: Prüfung
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regeln prüfen (ohne Browser)
+        run: node tools/check.js
+
+      - name: Playwright mit Chromium installieren
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Startseite und Spiele im Browser öffnen
+        run: node tools/smoke.js
+
+      - name: Screenshots hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: test-ergebnisse/
+          if-no-files-found: ignore

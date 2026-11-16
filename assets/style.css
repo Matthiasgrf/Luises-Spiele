@@ -1,0 +1,198 @@
+/* Design der Startseite. Ruhig, freundlich, große Tippflächen. */
+
+:root {
+  color-scheme: light;
+  --himmel: #e3f3fb;
+  --grund: #fdf9f0;
+  --karte: #ffffff;
+  --tinte: #2f3355;
+  --tinte-leise: #5a5f80;
+  --rand: #e4dccb;
+  --blau: #2f6fb0;
+  --blau-dunkel: #24588d;
+  --sonne: #ffd85e;
+  --wiese: #dff2df;
+  --wiese-text: #235c33;
+  --flieder: #ece6fa;
+  --flieder-text: #4a3a86;
+  --schatten: 0 3px 0 rgba(47, 51, 85, 0.08), 0 10px 24px rgba(47, 51, 85, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--grund);
+  color: var(--tinte);
+  font-family: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Kopf ---------- */
+
+.kopf {
+  background: linear-gradient(var(--himmel), var(--grund));
+  text-align: center;
+  padding: 28px 16px 12px;
+}
+.kopf-bild { font-size: 2.4rem; letter-spacing: 0.15em; line-height: 1.2; }
+.kopf h1 {
+  margin: 8px auto 6px;
+  max-width: 18em;
+  font-size: clamp(1.7rem, 6vw, 2.6rem);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.kopf p { margin: 0; color: var(--tinte-leise); font-size: 1.15rem; }
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+/* ---------- Filter ---------- */
+
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px 0 24px;
+}
+.filter[hidden] { display: none; }
+.filter button {
+  min-height: 52px;
+  padding: 10px 22px;
+  border: 2px solid var(--rand);
+  border-radius: 999px;
+  background: var(--karte);
+  color: var(--tinte);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.filter button[aria-pressed="true"] {
+  background: var(--blau);
+  border-color: var(--blau);
+  color: #fff;
+}
+.filter button:active { transform: translateY(2px); }
+
+/* ---------- Kacheln ---------- */
+
+.spiele {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 22px;
+}
+.kachel {
+  flex: 1 1 290px;
+  max-width: 370px;
+  display: flex;
+  flex-direction: column;
+  background: var(--karte);
+  border: 2px solid var(--rand);
+  border-radius: 26px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--schatten);
+  touch-action: manipulation;
+  transition: transform 0.12s ease;
+}
+.kachel[hidden] { display: none; }
+.kachel:active { transform: scale(0.98); }
+@media (hover: hover) {
+  .kachel:hover { border-color: var(--blau); }
+  .filter button:hover { border-color: var(--blau); }
+}
+
+.kachel-bild {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  background: var(--himmel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kachel-bild img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Fehlt das Bild, bleibt ein freundlicher Platzhalter. */
+.kachel-bild.ohne-bild img { display: none; }
+.kachel-bild.ohne-bild::before { content: "🎲"; font-size: 5rem; }
+.kachel-los {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--sonne);
+  color: var(--tinte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  padding-left: 4px;
+  box-shadow: 0 3px 0 rgba(47, 51, 85, 0.25);
+}
+
+.kachel-text { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.kachel-text h2 { margin: 0; font-size: 1.4rem; line-height: 1.2; }
+.kachel-text p { margin: 0; color: var(--tinte-leise); flex: 1; }
+
+.etiketten { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.etiketten li {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.etikett-alter { background: var(--wiese); color: var(--wiese-text); }
+.etikett-fach { background: var(--flieder); color: var(--flieder-text); }
+
+/* ---------- Hinweise, Fuß ---------- */
+
+.hinweis {
+  max-width: 30em;
+  margin: 32px auto;
+  padding: 22px;
+  text-align: center;
+  font-size: 1.25rem;
+  background: var(--karte);
+  border: 2px dashed var(--rand);
+  border-radius: 22px;
+}
+.hinweis[hidden] { display: none; }
+
+.fuss { text-align: center; padding: 18px 16px 28px; color: var(--tinte-leise); font-size: 0.95rem; }
+.fuss p { margin: 0; }
+
+a:focus-visible, button:focus-visible { outline: 4px solid var(--sonne); outline-offset: 3px; }
+.filter button:focus-visible, .kachel:focus-visible { outline-color: var(--blau-dunkel); }
+
+@media (max-width: 480px) {
+  .kopf { padding-top: 20px; }
+  .kopf-bild { font-size: 2rem; }
+  .spiele { gap: 18px; }
+  .kachel { max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kachel { transition: none; }
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Seite nicht gefunden – Lernspiele</title>
+<!-- Diese Seite erscheint bei jeder falschen Adresse, egal in welchem Ordner.
+     Darum steht hier alles in einer Datei, und der Link wird unten berechnet. -->
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 24px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    text-align: center; background: linear-gradient(#e3f3fb, #fdf9f0); color: #2f3355;
+    font-family: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    font-size: 1.25rem; line-height: 1.45;
+  }
+  .bild { font-size: 5.5rem; line-height: 1; }
+  h1 { margin: 0; font-size: clamp(1.8rem, 7vw, 2.6rem); line-height: 1.15; }
+  p { margin: 0; max-width: 22em; color: #5a5f80; }
+  a {
+    display: inline-block; margin-top: 14px; padding: 16px 30px; min-height: 60px;
+    border-radius: 999px; background: #2f6fb0; color: #fff; font-size: 1.4rem; font-weight: 700;
+    text-decoration: none; box-shadow: 0 4px 0 #24588d;
+  }
+  a:active { transform: translateY(3px); box-shadow: 0 1px 0 #24588d; }
+  a:focus-visible { outline: 4px solid #ffd85e; outline-offset: 3px; }
+</style>
+</head>
+<body>
+  <div class="bild" aria-hidden="true">🙈</div>
+  <h1>Hoppla!</h1>
+  <p>Diese Seite gibt es nicht. Komm, wir gehen zurück zu den Spielen.</p>
+  <a id="heim" href="./">🏠 Alle Spiele</a>
+  <script>
+    // Bei GitHub Pages liegt die Seite in einem Unterordner: name.github.io/<projekt>/
+    (function () {
+      var teile = location.pathname.split('/');
+      var projekt = /\.github\.io$/.test(location.hostname) && teile[1] ? teile[1] + '/' : '';
+      document.getElementById('heim').href = location.origin + '/' + projekt;
+    })();
+  </script>
+</body>
+</html>

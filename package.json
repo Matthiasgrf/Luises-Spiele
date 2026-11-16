@@ -1,0 +1,13 @@
+{
+  "name": "lernspiele",
+  "private": true,
+  "description": "Sammlung von Browser-Lernspielen für Kinder. Die Seite selbst braucht kein npm – es dient nur den Tests.",
+  "scripts": {
+    "check": "node tools/check.js",
+    "smoke": "node tools/smoke.js",
+    "test": "node tools/check.js && node tools/smoke.js"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
