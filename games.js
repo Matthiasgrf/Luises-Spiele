@@ -39,4 +39,11 @@ window.GAMES = [
     age: '6–7 Jahre',
     subject: 'Deutsch',
   },
+  {
+    id: 'schildkroete',
+    title: 'Kleine Schildkröte',
+    description: 'Lauf mit der Babyschildkröte über den Meeresboden, sammle Delfin-Münzen und löse Rätsel.',
+    age: '6–7 Jahre',
+    subject: 'Gemischt',
+  },
 ];

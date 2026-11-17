@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kleine Schildkröte</title>
+<style>
+  /* Farben des Spiels – hier lässt sich das Aussehen schnell ändern. */
+  :root {
+    color-scheme: light;
+    --wasser-hell: #bfeaf5;
+    --wasser: #4fb6d8;
+    --wasser-tief: #1c5f9c;
+    --karte: #ffffff;
+    --tinte: #23314f;
+    --tinte-leise: #4a5878;
+    --rand: #cfe3ee;
+    --blau: #2f6fb0;
+    --blau-dunkel: #24588d;
+    --gruen: #2e8b4e;
+    --gruen-dunkel: #1f6337;
+    --gruen-hell: #dff2df;
+    --orange-hell: #ffeccf;
+    --orange: #b3541e;
+    --sonne: #ffd85e;
+    --rosa: #e8527a;
+    --rosa-dunkel: #b83a5d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    background: linear-gradient(var(--wasser-hell), var(--wasser) 55%, var(--wasser-tief));
+    background-attachment: fixed;
+    color: var(--tinte);
+    font-family: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    font-size: 1.25rem; line-height: 1.4;
+    display: flex; justify-content: center;
+  }
+  .bildschirm {
+    width: 100%; max-width: 720px; min-height: 100vh; min-height: 100dvh;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  }
+  .mitte { justify-content: center; }
+  h1 { margin: 0; font-size: clamp(2rem, 8vw, 3rem); line-height: 1.15; text-wrap: balance; }
+  p { margin: 0; }
+  .gross-bild { font-size: clamp(4.5rem, 22vw, 7rem); line-height: 1.1; }
+  .tafel {
+    width: 100%; padding: 26px 18px; border-radius: 30px; background: rgba(255, 255, 255, 0.9);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .leise { color: var(--tinte-leise); }
+  .start-bild { width: min(260px, 70vw); height: auto; aspect-ratio: 3 / 2; }
+
+  /* Knöpfe und Links */
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  .knopf {
+    min-height: 68px; padding: 14px 34px; border: 0; border-radius: 999px;
+    background: var(--blau); color: #fff; font-size: 1.5rem; font-weight: 700;
+    box-shadow: 0 5px 0 var(--blau-dunkel);
+  }
+  .knopf:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--blau-dunkel); }
+  .knopf.start { min-height: 84px; padding: 16px 48px; font-size: 1.9rem; background: var(--gruen); box-shadow: 0 5px 0 var(--gruen-dunkel); }
+  .heim {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 8px 18px;
+    border: 2px solid var(--rand); border-radius: 999px; background: var(--karte);
+    color: var(--tinte); font-size: 1.05rem; font-weight: 700; text-decoration: none; white-space: nowrap;
+  }
+  .heim:active { transform: translateY(2px); }
+  a:focus-visible, button:focus-visible { outline: 4px solid var(--sonne); outline-offset: 3px; }
+
+  /* Spiel-Bildschirm: Leiste, Meer, Knöpfe – alles passt auf eine Bildschirmhöhe. */
+  #spiel { max-width: 1000px; height: 100vh; height: 100dvh; gap: 10px; }
+  .leiste { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .zaehler-gruppe { display: flex; gap: 6px; }
+  .zaehler {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 6px 14px; border-radius: 999px;
+    background: var(--karte); border: 2px solid var(--rand); font-weight: 700; font-size: 1.25rem; white-space: nowrap;
+  }
+  .zaehler.hops { animation: hops 0.25s; }
+  @keyframes hops { 50% { transform: scale(1.18); } }
+  .stand { width: 100%; display: flex; align-items: center; gap: 10px; }
+  .fortschritt {
+    flex: none; font-weight: 700; font-size: 1.05rem; white-space: nowrap;
+    padding: 2px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.85);
+  }
+  .balken { flex: 1; height: 14px; border-radius: 999px; background: var(--karte); border: 2px solid var(--rand); overflow: hidden; }
+  .balken div { height: 100%; width: 0; background: #ff6b9d; transition: width 0.3s ease; }
+
+  .meer {
+    position: relative; width: 100%; flex: 1; min-height: 0;
+    border-radius: 26px; overflow: hidden; border: 3px solid rgba(255, 255, 255, 0.85);
+    background: var(--wasser);
+  }
+  .meer > canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; }
+
+  .steuer { width: 100%; display: flex; gap: 12px; }
+  .tat {
+    flex: 1; min-height: 76px; border: 0; border-radius: 24px; padding: 0;
+    color: #fff; font-size: 2.6rem; line-height: 1;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .tat.springen { background: var(--blau); box-shadow: 0 5px 0 var(--blau-dunkel); }
+  .tat.mampf { background: var(--rosa); box-shadow: 0 5px 0 var(--rosa-dunkel); }
+  .tat:active, .tat.gedrueckt { transform: translateY(3px); box-shadow: none; filter: brightness(1.1); }
+  .tat.wink { animation: wink 0.9s ease-in-out infinite; }
+  @keyframes wink { 50% { transform: translateY(-5px) scale(1.04); filter: brightness(1.2); } }
+
+  /* Aufgabe: Karte über dem Meer */
+  .aufgabe {
+    position: absolute; inset: 0; overflow: auto;
+    display: flex; background: rgba(20, 60, 110, 0.45); padding: 12px;
+  }
+  .aufgabe-karte {
+    margin: auto; width: 100%; max-width: 560px; padding: 16px; border-radius: 26px;
+    background: var(--karte); border: 2px solid var(--rand);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .frage-zeile { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .frage-zeile h2 { margin: 0; font-size: clamp(1.4rem, 5.5vw, 1.9rem); line-height: 1.2; text-wrap: balance; }
+  .vorlesen {
+    flex: none; width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--rand);
+    background: var(--wasser-hell); font-size: 1.7rem; line-height: 1; padding: 0;
+  }
+  .vorlesen:active { transform: translateY(2px); }
+  .frage-bild { font-size: clamp(4rem, 18vw, 5.6rem); line-height: 1.15; }
+  .aepfel {
+    display: grid; grid-template-columns: repeat(5, auto); justify-content: center; gap: 2px 6px;
+    padding: 8px 14px; border-radius: 20px; background: #f3fae8;
+    font-size: clamp(2rem, 9vw, 2.8rem); line-height: 1.2;
+  }
+  .antworten { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .antwort {
+    min-height: 100px; padding: 8px; border-radius: 22px; border: 3px solid var(--rand);
+    background: var(--karte); font-size: clamp(2.6rem, 11vw, 3.4rem); font-weight: 700; line-height: 1.1;
+    box-shadow: 0 4px 0 var(--rand);
+  }
+  .antwort:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--rand); }
+  .antwort.richtig { background: var(--gruen-hell); border-color: var(--gruen); box-shadow: none; color: var(--tinte); opacity: 1; }
+  .antwort.falsch { background: var(--orange-hell); border-color: #e7b98c; box-shadow: none; opacity: 0.6; animation: wackeln 0.35s; }
+  .antwort:disabled { cursor: default; }
+  .antwort:disabled:not(.richtig):not(.falsch) { opacity: 0.5; box-shadow: none; }
+  @keyframes wackeln { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+  /* Labyrinth */
+  .labyrinth { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .labyrinth canvas { display: block; border-radius: 16px; touch-action: none; cursor: pointer; }
+  .labyrinth canvas.wackeln { animation: wackeln 0.3s; }
+  .richtungen { width: 100%; max-width: 420px; display: flex; gap: 8px; }
+  .richtung {
+    flex: 1; min-height: 64px; border: 0; border-radius: 18px; padding: 0;
+    background: var(--blau); color: #fff; font-size: 2rem; line-height: 1;
+    box-shadow: 0 4px 0 var(--blau-dunkel);
+  }
+  .richtung:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--blau-dunkel); }
+  .richtung:disabled { opacity: 0.4; box-shadow: none; }
+
+  .rueckmeldung { min-height: 2.9em; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; line-height: 1.25; }
+  .rueckmeldung.gut { color: var(--gruen); }
+  .rueckmeldung.nochmal { color: var(--orange); }
+
+  /* Sehr niedrige Bildschirme (Handy quer): Die Aufgabe bekommt den ganzen Bildschirm. */
+  @media (max-height: 560px) {
+    .aufgabe { position: fixed; z-index: 5; }
+    .tat { min-height: 56px; font-size: 2rem; }
+  }
+
+  /* End-Bildschirm */
+  .sterne { max-width: 100%; display: flex; flex-wrap: wrap; justify-content: center; font-size: clamp(1.4rem, 6.4vw, 2.6rem); line-height: 1.3; }
+  .sterne .leer { filter: grayscale(1); opacity: 0.3; }
+  .beute { display: flex; gap: 24px; justify-content: center; font-size: clamp(1.8rem, 8vw, 2.6rem); font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .antwort.falsch, .zaehler.hops, .tat.wink, .labyrinth canvas.wackeln { animation: none; }
+    .balken div { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. Start-Bildschirm -->
+<main class="bildschirm mitte" id="start">
+  <div class="tafel">
+    <canvas class="start-bild" id="start-bild" width="520" height="346" aria-hidden="true"></canvas>
+    <h1>Kleine Schildkröte</h1>
+    <p class="leise" id="rekord" hidden></p>
+    <button class="knopf start" id="los" type="button">▶ Los!</button>
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+  </div>
+</main>
+
+<!-- 2. Spiel-Bildschirm -->
+<main class="bildschirm" id="spiel" hidden>
+  <div class="leiste">
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+    <div class="zaehler-gruppe">
+      <span class="zaehler" id="zaehler" role="status" aria-label="Delfin-Münzen: 0">🐬 0</span>
+    </div>
+  </div>
+  <div class="stand">
+    <span class="fortschritt" id="fortschritt" aria-live="polite"></span>
+    <div class="balken" aria-hidden="true"><div id="balken"></div></div>
+  </div>
+  <div class="meer" id="meer">
+    <canvas id="bild" role="img" aria-label="Die kleine Schildkröte läuft über den Meeresboden und sammelt Delfin-Münzen."></canvas>
+    <div class="aufgabe" id="aufgabe" hidden>
+      <div class="aufgabe-karte" id="karte">
+        <div class="frage-zeile" id="frage-zeile">
+          <h2 id="frage"></h2>
+          <button class="vorlesen" id="vorlesen" type="button" aria-label="Aufgabe vorlesen">🔊</button>
+        </div>
+        <div class="frage-bild" id="frage-bild" aria-hidden="true"></div>
+        <div class="antworten" id="antworten"></div>
+        <div class="labyrinth" id="labyrinth" hidden>
+          <canvas id="lab-bild" role="img" aria-label="Labyrinth. Die Schildkröte muss zum Herz."></canvas>
+          <div class="richtungen" id="richtungen">
+            <button class="richtung" type="button" data-dx="-1" data-dy="0" aria-label="Nach links">⬅️</button>
+            <button class="richtung" type="button" data-dx="0" data-dy="-1" aria-label="Nach oben">⬆️</button>
+            <button class="richtung" type="button" data-dx="0" data-dy="1" aria-label="Nach unten">⬇️</button>
+            <button class="richtung" type="button" data-dx="1" data-dy="0" aria-label="Nach rechts">➡️</button>
+          </div>
+        </div>
+        <p class="rueckmeldung" id="rueckmeldung" role="status" aria-live="polite"></p>
+        <button class="knopf" id="weiter" type="button" hidden>Weiter ➡️</button>
+      </div>
+    </div>
+  </div>
+  <div class="steuer" id="steuer">
+    <button class="tat springen" id="springen" type="button" aria-label="Springen">⬆️</button>
+    <button class="tat mampf" id="mampf" type="button" aria-label="Aufessen">😋</button>
+  </div>
+</main>
+
+<!-- 3. End-Bildschirm -->
+<main class="bildschirm mitte" id="ende" hidden>
+  <div class="tafel">
+    <div class="gross-bild" aria-hidden="true">🎉</div>
+    <h1>Geschafft!</h1>
+    <p class="beute"><span id="beute-delfine"></span><span id="beute-gegner"></span></p>
+    <div class="sterne" id="sterne" aria-hidden="true"></div>
+    <p id="ergebnis"></p>
+    <button class="knopf start" id="nochmal" type="button">🔁 Nochmal spielen</button>
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Inhalt des Spiels ---------- */
+
+  // Eigener Speicher-Schlüssel für dieses Spiel.
+  const SPEICHER = 'lernspiele.schildkroete';
+
+  // Neun Herzen = neun Aufgaben. Die drei Arten kommen immer abwechselnd.
+  const ARTEN = ['labyrinth', 'aepfel', 'tier'];
+  const AUFGABEN_ZAHL = 9;
+  const LABYRINTH_GROESSE = [4, 5, 6]; // erstes, zweites und drittes Labyrinth
+  const BONUS = 3;                     // Delfin-Münzen für jede gelöste Aufgabe
+
+  // Tiere mit klarem Anfangslaut.
+  const TIERE = [
+    { b: 'A', wort: 'Affe', bild: '🐒' },
+    { b: 'B', wort: 'Bär', bild: '🐻' },
+    { b: 'D', wort: 'Delfin', bild: '🐬' },
+    { b: 'E', wort: 'Eule', bild: '🦉' },
+    { b: 'F', wort: 'Fisch', bild: '🐟' },
+    { b: 'G', wort: 'Giraffe', bild: '🦒' },
+    { b: 'H', wort: 'Hase', bild: '🐰' },
+    { b: 'I', wort: 'Igel', bild: '🦔' },
+    { b: 'K', wort: 'Kuh', bild: '🐮' },
+    { b: 'L', wort: 'Löwe', bild: '🦁' },
+    { b: 'M', wort: 'Maus', bild: '🐭' },
+    { b: 'O', wort: 'Oktopus', bild: '🐙' },
+    { b: 'P', wort: 'Pinguin', bild: '🐧' },
+    { b: 'R', wort: 'Raupe', bild: '🐛' },
+    { b: 'S', wort: 'Schwein', bild: '🐷' },
+    { b: 'T', wort: 'Tiger', bild: '🐯' },
+    { b: 'W', wort: 'Wal', bild: '🐳' },
+    { b: 'Z', wort: 'Zebra', bild: '🦓' },
+  ];
+
+  const NOCHMAL_TEXTE = ['Fast! Versuch es noch einmal.', 'Noch nicht ganz. Probier es noch mal!', 'Schau noch einmal genau hin.'];
+
+  /* ---------- Helfer ---------- */
+
+  const $ = (id) => document.getElementById(id);
+  const bildschirme = ['start', 'spiel', 'ende'];
+  function zeige(name) {
+    bildschirme.forEach((b) => { $(b).hidden = b !== name; });
+    window.scrollTo(0, 0);
+  }
+  const zufall = (a, b) => a + Math.random() * (b - a);
+  const ganz = (a, b) => Math.floor(zufall(a, b + 1));
+  const klemme = (x, a, b) => Math.max(a, Math.min(b, x));
+  function mische(liste) {
+    const l = liste.slice();
+    for (let i = l.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [l[i], l[j]] = [l[j], l[i]];
+    }
+    return l;
+  }
+  const ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Vorlesen mit der Stimme des Geräts (ohne Internet). Fehlt sie, bleibt das Spiel still.
+  const stimme = window.speechSynthesis || null;
+  let kannSprechen = !!(stimme && window.SpeechSynthesisUtterance);
+  function sprich(text) {
+    if (!kannSprechen) return;
+    try {
+      stimme.cancel();
+      const s = new SpeechSynthesisUtterance(text);
+      s.lang = 'de-DE';
+      s.rate = 0.9;
+      s.onerror = (e) => {
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        kannSprechen = false;
+      };
+      stimme.speak(s);
+    } catch (e) { kannSprechen = false; }
+  }
+
+  // Kleine Töne, im Browser erzeugt.
+  let audio = null;
+  function ton(frequenz, dauer, wann, laut, form, bis) {
+    if (!audio) return;
+    try {
+      const t = audio.currentTime + (wann || 0);
+      const o = audio.createOscillator();
+      const g = audio.createGain();
+      o.type = form || 'triangle';
+      o.frequency.setValueAtTime(frequenz, t);
+      if (bis) o.frequency.exponentialRampToValueAtTime(bis, t + dauer);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(laut || 0.2, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + dauer + 0.05);
+    } catch (e) { /* ohne Ton weiterspielen */ }
+  }
+  const tonMuenze = () => { ton(1046.5, 0.08, 0, 0.1); ton(1568, 0.16, 0.06, 0.1); };
+  const tonSprung = () => ton(330, 0.25, 0, 0.12, 'sine', 660);
+  const tonMampf = () => { ton(200, 0.09, 0, 0.22, 'square'); ton(150, 0.12, 0.11, 0.22, 'square'); };
+  const tonRichtig = () => [523.25, 659.25, 783.99].forEach((hz, k) => ton(hz, 0.3, k * 0.1));
+  const tonFalsch = () => ton(220, 0.25);
+  const tonStoss = () => ton(140, 0.12, 0, 0.15, 'sine');
+
+  function ladeRekord() {
+    try { return JSON.parse(localStorage.getItem(SPEICHER) || '{}').rekord || 0; } catch (e) { return 0; }
+  }
+  function merkeRekord(wert) {
+    try { if (wert > ladeRekord()) localStorage.setItem(SPEICHER, JSON.stringify({ rekord: wert })); } catch (e) { /* egal */ }
+  }
+  function zeigeRekord() {
+    const r = ladeRekord();
+    $('rekord').hidden = r < 1;
+    $('rekord').textContent = 'Dein Rekord: ' + r + ' 🐬';
+  }
+
+  /* ---------- Spielstand ---------- */
+
+  let aufgaben = [];
+  let nummer = 0;          // Nummer der nächsten Aufgabe, ab 0
+  let sterne = 0;          // richtig beim ersten Versuch
+  let delfine = 0;         // gesammelte Delfin-Münzen
+  let gegessen = 0;        // aufgegessene Gegner
+  let ersterVersuch = true;
+  let geloest = false;
+  let phase = 'aus';       // 'laufen' | 'herz' | 'aufgabe' | 'aus'
+  let schonGesprungen = false;
+  let schonGegessen = false;
+
+  function baueAufgaben() {
+    const zahlen = mische([3, 4, 5, 6, 7, 8, 9, 10]);
+    const tiere = mische(TIERE);
+    const liste = [];
+    for (let i = 0; i < AUFGABEN_ZAHL; i++) {
+      const art = ARTEN[i % 3];
+      const runde = Math.floor(i / 3);
+      if (art === 'labyrinth') {
+        liste.push({
+          art, groesse: LABYRINTH_GROESSE[runde] || 5,
+          text: 'Finde den Weg zum Herz!',
+          sprechen: 'Hilf der kleinen Schildkröte durch das Labyrinth. Finde den Weg zum Herz!',
+          erklaerung: 'Super! Du hast den Weg gefunden.',
+        });
+      } else if (art === 'aepfel') {
+        const n = zahlen[runde];
+        const andere = mische([n - 2, n - 1, n + 1, n + 2].filter((x) => x >= 1 && x <= 12)).slice(0, 2);
+        const antworten = mische([n, ...andere]).map(String);
+        liste.push({
+          art, zahl: n, antworten, richtig: antworten.indexOf(String(n)),
+          text: 'Wie viele Äpfel?',
+          sprechen: 'Wie viele Äpfel sind es? Zähle genau!',
+          erklaerung: 'Richtig! Es sind ' + n + ' Äpfel.',
+        });
+      } else {
+        const t = tiere[runde];
+        const andere = mische(TIERE.filter((x) => x.b !== t.b)).slice(0, 2).map((x) => x.b);
+        const antworten = mische([t.b, ...andere]);
+        liste.push({
+          art, tier: t, antworten, richtig: antworten.indexOf(t.b),
+          text: 'Womit fängt es an?',
+          sprechen: t.wort + '. Womit fängt ' + t.wort + ' an?',
+          erklaerung: 'Genau! ' + t.wort + ' fängt mit ' + t.b + ' an.',
+        });
+      }
+    }
+    return liste;
+  }
+
+  function zeigeStand() {
+    const n = Math.min(nummer + 1, AUFGABEN_ZAHL);
+    $('fortschritt').textContent = 'Aufgabe ' + n + ' / ' + AUFGABEN_ZAHL;
+    const z = $('zaehler');
+    z.textContent = '🐬 ' + delfine;
+    z.setAttribute('aria-label', 'Delfin-Münzen: ' + delfine);
+  }
+  function zaehlerHops() {
+    const z = $('zaehler');
+    z.classList.remove('hops');
+    void z.offsetWidth;
+    z.classList.add('hops');
+  }
+
+  function starte() {
+    if (!audio) {
+      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+    }
+    if (audio && audio.state === 'suspended') audio.resume().catch(() => {});
+    aufgaben = baueAufgaben();
+    nummer = 0; sterne = 0; delfine = 0; gegessen = 0;
+    schonGesprungen = false; schonGegessen = false;
+    $('balken').style.width = '0%';
+    $('aufgabe').hidden = true;
+    $('steuer').hidden = false;
+    zeige('spiel');
+    passeGroesseAn();
+    neueWelt();
+    zeigeStand();
+    phase = 'laufen';
+    $('springen').classList.add('wink');
+    sprich('Lauf mit der kleinen Schildkröte über den Meeresboden. Sammle die Delfin-Münzen! Mit dem Pfeil springst du hoch.');
+    letzteZeit = 0;
+    if (!laeuft) { laeuft = true; requestAnimationFrame(bildNeu); }
+  }
+
+  /* ---------- Aufgaben ---------- */
+
+  function zeigeAufgabe() {
+    const a = aufgaben[nummer];
+    phase = 'aufgabe';
+    ersterVersuch = true;
+    geloest = false;
+    $('frage').textContent = a.text;
+    $('rueckmeldung').textContent = '';
+    $('rueckmeldung').className = 'rueckmeldung';
+    $('weiter').hidden = true;
+    $('steuer').hidden = true;
+    springenAus();
+
+    const bild = $('frage-bild');
+    const feld = $('antworten');
+    bild.textContent = '';
+    feld.textContent = '';
+    bild.hidden = a.art === 'labyrinth';
+    feld.hidden = a.art === 'labyrinth';
+    $('labyrinth').hidden = a.art !== 'labyrinth';
+
+    if (a.art === 'aepfel') {
+      const korb = document.createElement('div');
+      korb.className = 'aepfel';
+      for (let i = 0; i < a.zahl; i++) {
+        const s = document.createElement('span');
+        s.textContent = '🍎';
+        korb.appendChild(s);
+      }
+      bild.appendChild(korb);
+    } else if (a.art === 'tier') {
+      bild.textContent = a.tier.bild;
+    }
+
+    if (a.art === 'labyrinth') {
+      neuesLabyrinth(a.groesse);
+    } else {
+      a.antworten.forEach((text, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'antwort';
+        b.textContent = text;
+        b.addEventListener('click', () => antworte(i, b));
+        feld.appendChild(b);
+      });
+    }
+    $('aufgabe').hidden = false;
+    $('aufgabe').scrollTop = 0;
+    if (a.art === 'labyrinth') {
+      passeLabyrinthAn();
+      document.querySelector('.richtung[data-dx="1"]').focus({ preventScroll: true });
+    }
+    [392, 523.25].forEach((hz, k) => ton(hz, 0.25, k * 0.12));
+    sprich(a.sprechen);
+  }
+
+  function antworte(i, knopf) {
+    if (phase !== 'aufgabe' || geloest || knopf.disabled) return;
+    const a = aufgaben[nummer];
+    const meldung = $('rueckmeldung');
+    if (i !== a.richtig) {
+      // Falsch: freundlich bleiben, die Antwort sperren, neuer Versuch.
+      ersterVersuch = false;
+      knopf.disabled = true;
+      knopf.classList.add('falsch');
+      const text = NOCHMAL_TEXTE[Math.floor(Math.random() * NOCHMAL_TEXTE.length)];
+      meldung.textContent = '💪 ' + text;
+      meldung.className = 'rueckmeldung nochmal';
+      tonFalsch();
+      sprich(text);
+      return;
+    }
+    [...$('antworten').children].forEach((b) => { b.disabled = true; });
+    knopf.classList.add('richtig');
+    geschafft();
+  }
+
+  // Richtig gelöst: kurze Erklärung, dann weiter.
+  function geschafft() {
+    const a = aufgaben[nummer];
+    geloest = true;
+    if (ersterVersuch) sterne++;
+    const meldung = $('rueckmeldung');
+    meldung.textContent = '✅ ' + a.erklaerung;
+    meldung.className = 'rueckmeldung gut';
+    tonRichtig();
+    sprich(a.erklaerung);
+    $('balken').style.width = ((nummer + 1) / AUFGABEN_ZAHL * 100) + '%';
+    const weiter = $('weiter');
+    weiter.textContent = nummer + 1 < AUFGABEN_ZAHL ? 'Weiter ➡️' : 'Fertig 🎉';
+    weiter.hidden = false;
+    weiter.focus({ preventScroll: true });
+    weiter.scrollIntoView({ block: 'nearest' });
+  }
+
+  function weiter() {
+    if (phase !== 'aufgabe' || !geloest) return;
+    delfine += BONUS;
+    zaehlerHops();
+    funken.push({ x: schildiX(), y: sandY - einheit * 2, t: 0, text: '+' + BONUS + ' 🐬' });
+    nummer++;
+    $('aufgabe').hidden = true;
+    if (nummer >= AUFGABEN_ZAHL) { zeigeEnde(); return; }
+    [659.25, 783.99, 1046.5].forEach((hz, k) => ton(hz, 0.2, k * 0.07, 0.12));
+    $('steuer').hidden = false;
+    zeigeStand();
+    neueStrecke();
+    phase = 'laufen';
+    $('springen').focus({ preventScroll: true });
+  }
+
+  function zeigeEnde() {
+    phase = 'aus';
+    springenAus();
+    merkeRekord(delfine);
+    $('beute-delfine').textContent = '🐬 ' + delfine;
+    $('beute-gegner').textContent = '😋 ' + gegessen;
+    const feld = $('sterne');
+    feld.textContent = '';
+    for (let i = 0; i < AUFGABEN_ZAHL; i++) {
+      const s = document.createElement('span');
+      s.textContent = '⭐';
+      if (i >= sterne) s.className = 'leer';
+      feld.appendChild(s);
+    }
+    const text = 'Du hast ' + delfine + ' Delfin-Münzen und ' + sterne + (sterne === 1 ? ' Stern' : ' Sterne') + ' gesammelt.';
+    $('ergebnis').textContent = text;
+    zeige('ende');
+    [523.25, 587.33, 659.25, 783.99, 1046.5].forEach((hz, k) => ton(hz, 0.35, k * 0.13));
+    sprich('Geschafft! ' + text);
+    $('nochmal').focus({ preventScroll: true });
+  }
+
+  /* ---------- Labyrinth ---------- */
+
+  const labLeinwand = $('lab-bild');
+  const lctx = labLeinwand.getContext('2d');
+  let lab = null;   // { n, zellen, pos, anzeige, spur, groesse }
+
+  // Zufälliges Labyrinth: Jede Zelle kennt ihre Wände oben, rechts, unten, links.
+  function neuesLabyrinth(n) {
+    const zellen = [];
+    for (let y = 0; y < n; y++) {
+      zellen.push([]);
+      for (let x = 0; x < n; x++) zellen[y].push({ o: true, r: true, u: true, l: true, besucht: false });
+    }
+    const stapel = [{ x: 0, y: 0 }];
+    zellen[0][0].besucht = true;
+    while (stapel.length) {
+      const c = stapel[stapel.length - 1];
+      const nachbarn = [
+        { x: c.x, y: c.y - 1, w: 'o', g: 'u' }, { x: c.x + 1, y: c.y, w: 'r', g: 'l' },
+        { x: c.x, y: c.y + 1, w: 'u', g: 'o' }, { x: c.x - 1, y: c.y, w: 'l', g: 'r' },
+      ].filter((m) => m.x >= 0 && m.y >= 0 && m.x < n && m.y < n && !zellen[m.y][m.x].besucht);
+      if (!nachbarn.length) { stapel.pop(); continue; }
+      const m = nachbarn[Math.floor(Math.random() * nachbarn.length)];
+      zellen[c.y][c.x][m.w] = false;
+      zellen[m.y][m.x][m.g] = false;
+      zellen[m.y][m.x].besucht = true;
+      stapel.push({ x: m.x, y: m.y });
+    }
+    lab = { n, zellen, pos: { x: 0, y: 0 }, anzeige: { x: 0, y: 0 }, spur: new Set(['0,0']), groesse: 240, blick: 1 };
+    document.querySelectorAll('.richtung').forEach((b) => { b.disabled = false; });
+  }
+
+  function passeLabyrinthAn() {
+    if (!lab) return;
+    const karte = $('karte');
+    const breite = karte.clientWidth - 32;
+    const andere = $('frage-zeile').offsetHeight + $('richtungen').offsetHeight + $('rueckmeldung').offsetHeight + 68 + 50;
+    const hoehe = $('aufgabe').clientHeight - 24 - 32 - andere;
+    const s = Math.floor(klemme(Math.min(breite, hoehe, 420), 180, 420));
+    lab.groesse = s;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    labLeinwand.style.width = s + 'px';
+    labLeinwand.style.height = s + 'px';
+    labLeinwand.width = Math.round(s * dpr);
+    labLeinwand.height = Math.round(s * dpr);
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  const offen = (x, y, dx, dy) => {
+    const z = lab.zellen[y][x];
+    return dx === 1 ? !z.r : dx === -1 ? !z.l : dy === 1 ? !z.u : !z.o;
+  };
+
+  function geheLabyrinth(dx, dy, schritte) {
+    if (phase !== 'aufgabe' || geloest || !lab) return;
+    if (dx) lab.blick = dx;
+    let gegangen = 0;
+    for (let i = 0; i < (schritte || 1); i++) {
+      if (!offen(lab.pos.x, lab.pos.y, dx, dy)) break;
+      lab.pos.x += dx; lab.pos.y += dy;
+      lab.spur.add(lab.pos.x + ',' + lab.pos.y);
+      gegangen++;
+    }
+    if (!gegangen) {
+      // Gegen die Wand: nur ein kleiner Wackler, kein Abzug.
+      tonStoss();
+      labLeinwand.classList.remove('wackeln');
+      void labLeinwand.offsetWidth;
+      labLeinwand.classList.add('wackeln');
+      return;
+    }
+    ton(600 + gegangen * 60, 0.07, 0, 0.08, 'sine');
+    if (lab.pos.x === lab.n - 1 && lab.pos.y === lab.n - 1) {
+      document.querySelectorAll('.richtung').forEach((b) => { b.disabled = true; });
+      geschafft();
+    }
+  }
+
+  // Tippen ins Labyrinth: Die Schildkröte läuft in diese Richtung, so weit es geht bis zur getippten Stelle.
+  labLeinwand.addEventListener('pointerdown', (e) => {
+    if (!lab) return;
+    e.preventDefault();
+    const r = labLeinwand.getBoundingClientRect();
+    const c = r.width / lab.n;
+    const zx = Math.floor((e.clientX - r.left) / c), zy = Math.floor((e.clientY - r.top) / c);
+    const dx = zx - lab.pos.x, dy = zy - lab.pos.y;
+    if (!dx && !dy) return;
+    if (Math.abs(dx) >= Math.abs(dy)) geheLabyrinth(Math.sign(dx), 0, dy === 0 ? Math.abs(dx) : 1);
+    else geheLabyrinth(0, Math.sign(dy), dx === 0 ? Math.abs(dy) : 1);
+  });
+
+  function maleLabyrinth(dt) {
+    if (!lab || $('labyrinth').hidden) return;
+    const s = lab.groesse, n = lab.n, c = s / n;
+    // Die Anzeige gleitet zur echten Stelle.
+    const k = ruhig ? 1 : Math.min(1, dt * 14);
+    lab.anzeige.x += (lab.pos.x - lab.anzeige.x) * k;
+    lab.anzeige.y += (lab.pos.y - lab.anzeige.y) * k;
+
+    const g = lctx;
+    g.clearRect(0, 0, s, s);
+    const hg = g.createLinearGradient(0, 0, 0, s);
+    hg.addColorStop(0, '#d8f3f7');
+    hg.addColorStop(1, '#bfe6ee');
+    g.fillStyle = hg;
+    g.fillRect(0, 0, s, s);
+
+    // Spur der besuchten Felder
+    g.fillStyle = 'rgba(46, 139, 78, 0.22)';
+    lab.spur.forEach((key) => {
+      const [x, y] = key.split(',').map(Number);
+      g.beginPath(); g.arc((x + 0.5) * c, (y + 0.5) * c, c * 0.14, 0, Math.PI * 2); g.fill();
+    });
+
+    // Ziel: Herz
+    const puls = ruhig ? 1 : 1 + Math.sin(zeit * 5) * 0.07;
+    maleHerz(g, (n - 0.5) * c, (n - 0.5) * c, c * 0.62 * puls, 1);
+
+    // Wände
+    g.strokeStyle = '#1f6f78';
+    g.lineWidth = Math.max(4, c * 0.11);
+    g.lineCap = 'round';
+    g.beginPath();
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const z = lab.zellen[y][x], x0 = x * c, y0 = y * c;
+        if (z.o) { g.moveTo(x0, y0); g.lineTo(x0 + c, y0); }
+        if (z.l) { g.moveTo(x0, y0); g.lineTo(x0, y0 + c); }
+        if (y === n - 1 && z.u) { g.moveTo(x0, y0 + c); g.lineTo(x0 + c, y0 + c); }
+        if (x === n - 1 && z.r) { g.moveTo(x0 + c, y0); g.lineTo(x0 + c, y0 + c); }
+      }
+    }
+    g.stroke();
+
+    // Schildkröte
+    const tx = (lab.anzeige.x + 0.5) * c, ty = (lab.anzeige.y + 0.5) * c;
+    const bewegt = Math.abs(lab.pos.x - lab.anzeige.x) + Math.abs(lab.pos.y - lab.anzeige.y) > 0.02;
+    g.save();
+    g.translate(tx, ty);
+    if (lab.blick < 0) g.scale(-1, 1);
+    maleSchildi(g, 0, c * 0.3, (c * 0.78) / 80, bewegt ? zeit * 10 : 0, 0, 0);
+    g.restore();
+  }
+
+  /* ---------- Das Meer (Zeichenfläche) ---------- */
+
+  const leinwand = $('bild');
+  const ctx = leinwand.getContext('2d');
+  const EMOJI = 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  let W = 300, H = 300;    // Größe in CSS-Pixeln
+  let einheit = 40;        // Grundmaß für alle Figuren
+  let sandY = 240;         // Hier läuft die Schildkröte
+  let tempo = 130;         // Pixel pro Sekunde, mit denen der Boden vorbeizieht
+
+  // Höhen werden in „Einheiten über dem Boden“ gespeichert, damit sie zur Größe passen.
+  let schildi = { h: 0, vh: 0, schritt: 0, mund: 0 };
+  let muenzen = [];        // { x, h, weg }
+  let gegner = [];         // { x, art, phase, gegessen, t }
+  let herz = null;         // { x, t }
+  let kulisse = [];        // { x, art, h, phase, farbe }
+  let deko = [];           // Seesterne und Muscheln im Sand { x, art, tiefe, farbe }
+  let fische = [];         // { x, y, v, bild, gr }
+  let blasen = [];         // { x, y, r, v }
+  let funken = [];         // { x, y, t, text }
+  let plan = [];           // was auf dieser Strecke noch kommt
+  let abstand = 0;         // Pixel bis zum nächsten Ding
+  let lauf = 0;            // gesamte Strecke in Pixeln
+  let zeit = 0;
+  let herzZeit = 0;
+  let blockZeit = 0;       // so lange steht die Schildkröte schon vor einem Gegner
+  let laeuft = false;
+  let letzteZeit = 0;
+
+  const G = 9;             // Schwerkraft unter Wasser (Einheiten/s²) – sanft
+  const SPRUNG = 6.6;      // Sprungkraft (Einheiten/s)
+
+  function passeGroesseAn() {
+    const r = $('meer').getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) return;
+    W = r.width; H = r.height;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    leinwand.width = Math.round(W * dpr);
+    leinwand.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    einheit = klemme(Math.min(W * 0.11, H * 0.12), 30, 60);
+    sandY = H - Math.max(54, H * 0.2);
+    tempo = klemme(W * 0.24, 110, 230);
+    fische.forEach((f) => { f.y = klemme(f.y, 20, sandY - einheit * 3); });
+    blasen.forEach((b) => { b.y = klemme(b.y, -10, H); });
+    if (phase === 'aufgabe') passeLabyrinthAn();
+  }
+
+  function neueWelt() {
+    schildi = { h: 0, vh: 0, schritt: 0, mund: 0 };
+    muenzen = []; gegner = []; kulisse = []; deko = []; fische = []; blasen = []; funken = [];
+    herz = null; lauf = 0; zeit = 0; blockZeit = 0;
+    for (let x = 30; x < W + 100; x += zufall(110, 200)) neueKulisse(x);
+    for (let x = 20; x < W + 100; x += zufall(120, 220)) neueDeko(x);
+    for (let i = 0; i < 3; i++) neuerFisch(zufall(0, W));
+    for (let i = 0; i < 10; i++) blasen.push({ x: zufall(0, W), y: zufall(0, H), r: zufall(2, 6), v: zufall(20, 50) });
+    neueStrecke();
+  }
+
+  // Eine Strecke bis zum nächsten Herz: Münzen, ein oder zwei Gegner, am Ende das Herz.
+  function neueStrecke() {
+    const gruppen = mische(['boden', 'bogen', 'boden', 'hoch', 'bogen', 'treppe']);
+    plan = nummer === 0
+      ? ['boden', 'bogen', 'gegner', 'boden', 'hoch', 'gegner', 'bogen', 'herz']
+      : [gruppen[0], 'gegner', gruppen[1], gruppen[2], 'gegner', gruppen[3], 'herz'];
+    abstand = tempo * 1.2;
+  }
+
+  function neueKulisse(x) {
+    const wahl = Math.random();
+    const art = wahl < 0.5 ? 'gras' : wahl < 0.8 ? 'koralle' : 'stein';
+    const farben = art === 'gras' ? ['#2f9e6a', '#3fb37c', '#248a5a'] : art === 'koralle' ? ['#ff7f9c', '#ff9d5c', '#c77dff'] : ['#7f93a8', '#93a5b8'];
+    kulisse.push({ x, art, h: zufall(0.8, 1.5), phase: zufall(0, 6), farbe: farben[Math.floor(Math.random() * farben.length)] });
+  }
+  function neueDeko(x) {
+    const art = Math.random() < 0.55 ? 'stern' : 'muschel';
+    deko.push({ x, art, tiefe: zufall(0.3, 0.8), farbe: ['#ff8a65', '#ffb74d', '#f06292'][Math.floor(Math.random() * 3)], dreh: zufall(-0.5, 0.5) });
+  }
+  function neuerFisch(x) {
+    const bilder = ['🐟', '🐠', '🐡'];
+    fische.push({ x, y: zufall(H * 0.06, Math.max(H * 0.1, sandY - einheit * 3)), v: zufall(0.35, 0.7), bild: bilder[Math.floor(Math.random() * bilder.length)], gr: zufall(0.45, 0.7) });
+  }
+
+  function erzeuge(was) {
+    const x0 = W + einheit;
+    const d = tempo * 0.3;
+    if (was === 'boden') {
+      for (let i = 0; i < 3; i++) muenzen.push({ x: x0 + i * d, h: 0.6 });
+      return tempo * 1.6;
+    }
+    if (was === 'bogen') {
+      [1.0, 1.9, 2.3, 1.9, 1.0].forEach((h, i) => muenzen.push({ x: x0 + i * d * 0.75, h: h + 0.5 }));
+      return tempo * 2.0;
+    }
+    if (was === 'hoch') {
+      muenzen.push({ x: x0, h: 2.6 });
+      return tempo * 1.4;
+    }
+    if (was === 'treppe') {
+      [0.6, 1.4, 2.2].forEach((h, i) => muenzen.push({ x: x0 + i * d, h }));
+      return tempo * 1.7;
+    }
+    if (was === 'gegner') {
+      const art = Math.random() < 0.5 ? 'qualle' : 'krabbe';
+      gegner.push({ x: x0 + einheit, art, phase: zufall(0, 6), gegessen: false, t: 0, gemeldet: false });
+      return tempo * 2.0;
+    }
+    if (was === 'herz') {
+      herz = { x: x0 + einheit, t: 0 };
+      return Infinity;
+    }
+    return tempo;
+  }
+
+  const schildiX = () => Math.max(einheit * 2.4, W * 0.22);
+
+  function springe() {
+    if (phase !== 'laufen') return;
+    if (schildi.h > 0.05) return;
+    schildi.vh = SPRUNG;
+    tonSprung();
+    if (!schonGesprungen) {
+      schonGesprungen = true;
+      $('springen').classList.remove('wink');
+    }
+  }
+
+  // Aufessen: Der nächste Gegner vor der Schildkröte wird gemampft.
+  function mampf() {
+    if (phase !== 'laufen') return;
+    schildi.mund = 0.4;
+    const tx = schildiX();
+    const ziel = gegner.find((g) => !g.gegessen && g.x - tx > -einheit * 0.5 && g.x - tx < einheit * 3.6);
+    if (!ziel) { ton(260, 0.07, 0, 0.1, 'square'); return; }
+    ziel.gegessen = true;
+    ziel.t = 0;
+    gegessen++;
+    blockZeit = 0;
+    tonMampf();
+    funken.push({ x: ziel.x, y: sandY - einheit * 1.6, t: 0, text: 'Mampf!' });
+    $('mampf').classList.remove('wink');
+    if (!schonGegessen) {
+      schonGegessen = true;
+      sprich('Mampf! Lecker!');
+    }
+  }
+
+  function vordersterGegner() {
+    const tx = schildiX();
+    let best = null;
+    gegner.forEach((g) => { if (!g.gegessen && g.x > tx - einheit && (!best || g.x < best.x)) best = g; });
+    return best;
+  }
+
+  function schritt(dt) {
+    zeit += dt;
+
+    // Blasen steigen immer.
+    blasen.forEach((b) => {
+      b.y -= b.v * dt;
+      if (b.y < -10) { b.y = H + 10; b.x = zufall(0, W); }
+    });
+    funken.forEach((f) => { f.t += dt; });
+    funken = funken.filter((f) => f.t < 1);
+    schildi.mund = Math.max(0, schildi.mund - dt);
+    gegner.forEach((g) => { if (g.gegessen) g.t += dt; });
+    gegner = gegner.filter((g) => !(g.gegessen && g.t > 0.45));
+
+    // Springen: sanft hoch und langsam wieder runter.
+    if (schildi.h > 0 || schildi.vh > 0) {
+      schildi.vh -= G * dt;
+      schildi.h += schildi.vh * dt;
+      if (schildi.h <= 0) { schildi.h = 0; schildi.vh = 0; }
+    }
+
+    if (phase === 'herz') {
+      herzZeit += dt;
+      if (herzZeit > 0.8) { herz = null; zeigeAufgabe(); }
+    }
+
+    // Ein Gegner versperrt den Weg? Dann bleibt die Schildkröte stehen, bis er aufgegessen ist.
+    const tx = schildiX();
+    const vorn = vordersterGegner();
+    const blockiert = phase === 'laufen' && vorn && vorn.x - tx < einheit * 2.0;
+    if (blockiert) {
+      blockZeit += dt;
+      $('mampf').classList.add('wink');
+      if (!vorn.gemeldet) {
+        vorn.gemeldet = true;
+        const name = vorn.art === 'qualle' ? 'Eine Qualle' : 'Eine Krabbe';
+        sprich(gegessen === 0 ? name + ' versperrt den Weg! Tipp auf den Mampf-Knopf und iss sie auf!' : name + '! Mampf sie auf!');
+      } else if (blockZeit > 7) {
+        blockZeit = 0;
+        sprich('Tipp auf den Mampf-Knopf!');
+      }
+    } else {
+      blockZeit = 0;
+    }
+
+    const weg = phase === 'laufen' && !blockiert ? tempo * dt : 0;
+    lauf += weg;
+    if (weg) schildi.schritt += dt * 9;
+
+    fische.forEach((f) => { f.x -= (weg * 0.4) + f.v * 30 * dt; });
+    fische = fische.filter((f) => f.x > -60);
+    while (fische.length < 3) neuerFisch(W + zufall(40, 300));
+
+    if (!weg) return;
+
+    kulisse.forEach((k) => { k.x -= weg * 0.6; });
+    kulisse = kulisse.filter((k) => k.x > -120);
+    if (!kulisse.length || kulisse[kulisse.length - 1].x < W - zufall(110, 200)) neueKulisse(W + 80);
+    deko.forEach((k) => { k.x -= weg; });
+    deko = deko.filter((k) => k.x > -60);
+    if (!deko.length || deko[deko.length - 1].x < W - zufall(120, 220)) neueDeko(W + 40);
+
+    muenzen.forEach((m) => { m.x -= weg; });
+    gegner.forEach((g) => { g.x -= weg; });
+    if (herz) herz.x -= weg;
+
+    // Münzen einsammeln – großzügig, damit es leicht gelingt.
+    const kopfX = tx + einheit * 0.3;
+    const mitteH = schildi.h + 0.6;
+    const reich = 1.0;
+    muenzen.forEach((m) => {
+      if (m.weg) return;
+      const dx = (m.x - kopfX) / einheit, dy = m.h - mitteH;
+      if (dx * dx + dy * dy < reich * reich) {
+        m.weg = true;
+        delfine++;
+        zeigeStand();
+        zaehlerHops();
+        funken.push({ x: m.x, y: sandY - m.h * einheit, t: 0, text: '✨' });
+        tonMuenze();
+      }
+    });
+    muenzen = muenzen.filter((m) => !m.weg && m.x > -50);
+
+    // Durch das Herz laufen: Jetzt kommt eine Aufgabe.
+    if (herz && phase === 'laufen' && herz.x <= tx + einheit * 0.2) {
+      phase = 'herz';
+      herzZeit = 0;
+      $('mampf').classList.remove('wink');
+      [523.25, 783.99, 1046.5, 1318.5].forEach((hz, k) => ton(hz, 0.25, k * 0.08, 0.14));
+      for (let i = 0; i < 6; i++) funken.push({ x: herz.x + zufall(-30, 30), y: sandY - einheit * zufall(0.5, 2), t: zufall(0, 0.3), text: '💖' });
+    }
+
+    // Was kommt als Nächstes?
+    abstand -= weg;
+    if (abstand <= 0 && plan.length) abstand = erzeuge(plan.shift());
+  }
+
+  /* ---------- Zeichnen ---------- */
+
+  function male() {
+    // Wasser
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#8fdcee');
+    g.addColorStop(0.55, '#3da6d0');
+    g.addColorStop(1, '#1f6aa5');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Lichtstrahlen
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) {
+      const x = W * (0.1 + i * 0.26) + (ruhig ? 0 : Math.sin(zeit * 0.4 + i) * 14);
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x + W * 0.09, 0);
+      ctx.lineTo(x - W * 0.08, sandY); ctx.lineTo(x - W * 0.26, sandY);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    // Fische im Hintergrund
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    fische.forEach((f) => {
+      ctx.font = Math.round(einheit * f.gr) + 'px ' + EMOJI;
+      ctx.fillText(f.bild, f.x, f.y + (ruhig ? 0 : Math.sin(zeit * 1.3 + f.x * 0.01) * 4));
+    });
+    ctx.restore();
+
+    // Blasen
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.5;
+    blasen.forEach((b) => {
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+    ctx.restore();
+
+    // Hintere Düne
+    ctx.fillStyle = '#d9c48f';
+    ctx.beginPath();
+    ctx.moveTo(0, sandY);
+    for (let x = 0; x <= W + 20; x += 20) ctx.lineTo(x, sandY - einheit * 0.35 + Math.sin((x + lauf * 0.6) * 0.008) * einheit * 0.3);
+    ctx.lineTo(W, sandY);
+    ctx.closePath(); ctx.fill();
+
+    kulisse.forEach(maleKulisse);
+
+    // Sandboden, auf dem die Schildkröte läuft
+    const sg = ctx.createLinearGradient(0, sandY, 0, H);
+    sg.addColorStop(0, '#f6e0a8');
+    sg.addColorStop(1, '#e2c27e');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W + 20; x += 20) ctx.lineTo(x, sandY + Math.sin((x + lauf) * 0.02) * 2);
+    ctx.lineTo(W, H);
+    ctx.closePath(); ctx.fill();
+    // Sandkörner und Rippeln
+    ctx.strokeStyle = 'rgba(190, 150, 80, 0.45)';
+    ctx.lineWidth = 2; ctx.lineCap = 'round';
+    for (let i = 0; i < 14; i++) {
+      const x = ((i * 113 - lauf) % (W + 60) + W + 60) % (W + 60) - 30;
+      const y = sandY + (H - sandY) * (0.3 + (i % 4) * 0.17);
+      ctx.beginPath(); ctx.moveTo(x - 9, y); ctx.quadraticCurveTo(x, y - 4, x + 9, y); ctx.stroke();
+    }
+    deko.forEach(maleDeko);
+
+    // Herz
+    if (herz) {
+      const puls = ruhig ? 1 : 1 + Math.sin(zeit * 4) * 0.08;
+      const auf = phase === 'herz' ? 1 + herzZeit * 1.5 : 1;
+      const alpha = phase === 'herz' ? Math.max(0, 1 - herzZeit / 0.8) : 1;
+      const hy = sandY - einheit * 1.25 + (ruhig ? 0 : Math.sin(zeit * 2) * 4);
+      ctx.save();
+      ctx.globalAlpha = 0.35 * alpha;
+      ctx.fillStyle = '#ffd1e3';
+      ctx.beginPath(); ctx.arc(herz.x, hy, einheit * 1.6 * auf, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      maleHerz(ctx, herz.x, hy, einheit * 1.5 * puls * auf, alpha);
+    }
+
+    // Delfin-Münzen
+    muenzen.forEach((m) => {
+      const wipp = ruhig ? 0 : Math.sin(zeit * 3 + m.x * 0.02) * 3;
+      maleDelfinMuenze(ctx, m.x, sandY - m.h * einheit + wipp, einheit * 0.95, m.x);
+    });
+
+    // Gegner
+    gegner.forEach((gg) => {
+      ctx.save();
+      const zx = gg.x, zy = sandY;
+      ctx.translate(zx, zy);
+      if (gg.gegessen) {
+        // schrumpft und fliegt zur Schildkröte
+        const k = Math.min(1, gg.t / 0.4);
+        ctx.translate(-(gg.x - schildiX() - einheit * 0.9) * k, -einheit * 0.3 * k);
+        ctx.scale(1 - k, 1 - k);
+      }
+      if (gg.art === 'qualle') maleQualle(ctx, einheit, gg.phase);
+      else maleKrabbe(ctx, einheit, gg.phase);
+      ctx.restore();
+    });
+
+    // Die Schildkröte
+    const tx = schildiX();
+    const s = einheit / 36;
+    const laufen = phase === 'laufen' && schildi.h === 0 && !(vordersterGegner() && vordersterGegner().x - tx < einheit * 2.0);
+    // Schatten
+    ctx.save();
+    ctx.fillStyle = 'rgba(120, 90, 40, 0.25)';
+    const sch = Math.max(0.4, 1 - schildi.h * 0.2);
+    ctx.beginPath(); ctx.ellipse(tx, sandY + 3, einheit * 1.1 * sch, einheit * 0.18 * sch, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    maleSchildi(ctx, tx, sandY - schildi.h * einheit, s, laufen ? schildi.schritt : 0, schildi.h > 0 ? 1 : 0, schildi.mund);
+
+    // Funken und Texte
+    funken.forEach((f) => {
+      if (f.t < 0) return;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - f.t);
+      const lang = f.text.length > 2;
+      ctx.font = '700 ' + Math.round(einheit * (lang ? 0.62 : 0.8)) + 'px ' + EMOJI;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = 'rgba(20,60,110,0.75)'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+      const y = f.y - f.t * einheit * 1.3;
+      if (lang) ctx.strokeText(f.text, f.x, y);
+      ctx.fillText(f.text, f.x, y);
+      ctx.restore();
+    });
+  }
+
+  function maleKulisse(k) {
+    const u = einheit * k.h;
+    const boden = sandY - einheit * 0.1;
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (k.art === 'gras') {
+      ctx.strokeStyle = k.farbe;
+      ctx.lineWidth = Math.max(5, u * 0.16);
+      for (let i = -1; i <= 1; i++) {
+        const schwank = ruhig ? 0 : Math.sin(zeit * 1.5 + k.phase + i) * u * 0.28;
+        const hoehe = u * (1.8 - Math.abs(i) * 0.45);
+        ctx.beginPath();
+        ctx.moveTo(k.x + i * u * 0.28, boden);
+        ctx.quadraticCurveTo(k.x + i * u * 0.28 - schwank * 0.5, boden - hoehe * 0.5, k.x + i * u * 0.28 + schwank, boden - hoehe);
+        ctx.stroke();
+      }
+    } else if (k.art === 'koralle') {
+      ctx.strokeStyle = k.farbe;
+      ctx.lineWidth = Math.max(7, u * 0.2);
+      const ast = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+      ast(k.x, boden, k.x, boden - u * 1.0);
+      ast(k.x, boden - u * 0.35, k.x - u * 0.42, boden - u * 0.8);
+      ast(k.x, boden - u * 0.5, k.x + u * 0.4, boden - u * 1.0);
+      ast(k.x - u * 0.42, boden - u * 0.8, k.x - u * 0.42, boden - u * 1.1);
+    } else {
+      ctx.fillStyle = k.farbe;
+      ctx.beginPath(); ctx.ellipse(k.x, boden, u * 0.7, u * 0.42, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath(); ctx.ellipse(k.x - u * 0.2, boden - u * 0.2, u * 0.22, u * 0.08, -0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function maleDeko(d) {
+    const y = sandY + (H - sandY) * d.tiefe;
+    const r = einheit * 0.28;
+    ctx.save();
+    ctx.translate(d.x, y);
+    ctx.rotate(d.dreh);
+    ctx.fillStyle = d.farbe;
+    if (d.art === 'stern') {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const rr = i % 2 === 0 ? r : r * 0.45, a = -Math.PI / 2 + i * Math.PI / 5;
+        ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr * 0.7);
+      }
+      ctx.closePath(); ctx.fill();
+    } else {
+      ctx.fillStyle = '#fbe3ec';
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.8, Math.PI, 0); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#e8a0b8'; ctx.lineWidth = 1.5;
+      for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(i * r * 0.32, -r * 0.75 + Math.abs(i) * r * 0.12); ctx.stroke(); }
+    }
+    ctx.restore();
+  }
+
+  // Herz-Form, Mitte bei (x, y), Breite etwa b.
+  function maleHerz(g, x, y, b, alpha) {
+    const r = b / 2;
+    g.save();
+    g.globalAlpha = alpha;
+    g.translate(x, y);
+    const v = g.createLinearGradient(0, -r, 0, r);
+    v.addColorStop(0, '#ff8fb8');
+    v.addColorStop(1, '#e8336f');
+    g.fillStyle = v;
+    g.shadowColor = 'rgba(255, 180, 210, 0.9)';
+    g.shadowBlur = b * 0.3;
+    g.beginPath();
+    g.moveTo(0, r * 0.95);
+    g.bezierCurveTo(-r * 1.3, r * 0.05, -r * 0.95, -r * 1.05, 0, -r * 0.45);
+    g.bezierCurveTo(r * 0.95, -r * 1.05, r * 1.3, r * 0.05, 0, r * 0.95);
+    g.closePath(); g.fill();
+    g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,255,255,0.6)';
+    g.beginPath(); g.ellipse(-r * 0.42, -r * 0.35, r * 0.2, r * 0.12, -0.6, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
+
+  // Münze in Form eines kleinen goldenen Delfins.
+  function maleDelfinMuenze(g, x, y, b, saat) {
+    const s = b / 46;
+    const glanz = ruhig ? 0.5 : (Math.sin(zeit * 4 + saat * 0.05) + 1) / 2;
+    g.save();
+    g.translate(x, y);
+    g.scale(s, s);
+    g.rotate(ruhig ? 0 : Math.sin(zeit * 2.5 + saat * 0.03) * 0.15);
+    // Leuchten
+    g.fillStyle = 'rgba(255, 240, 150, ' + (0.25 + glanz * 0.2) + ')';
+    g.beginPath(); g.arc(0, 0, 25, 0, Math.PI * 2); g.fill();
+
+    const v = g.createLinearGradient(0, -14, 0, 10);
+    v.addColorStop(0, '#fff3a6');
+    v.addColorStop(0.5, '#f7c823');
+    v.addColorStop(1, '#d99a06');
+    g.fillStyle = v;
+    g.strokeStyle = '#a8700a';
+    g.lineWidth = 1.8;
+    g.lineJoin = 'round';
+    // Körper
+    g.beginPath();
+    g.moveTo(20, 1);
+    g.quadraticCurveTo(15, -3, 11, -4);
+    g.quadraticCurveTo(6, -10, -3, -9);
+    g.quadraticCurveTo(-12, -7, -16, -2);
+    g.lineTo(-23, -8);
+    g.quadraticCurveTo(-21, -1, -19, 0);
+    g.quadraticCurveTo(-21, 2, -23, 7);
+    g.lineTo(-15, 2);
+    g.quadraticCurveTo(-4, 8, 8, 4);
+    g.quadraticCurveTo(14, 3, 20, 1);
+    g.closePath(); g.fill(); g.stroke();
+    // Rückenflosse
+    g.beginPath();
+    g.moveTo(1, -9);
+    g.quadraticCurveTo(-1, -16, -7, -17);
+    g.quadraticCurveTo(-5, -12, -6, -8.6);
+    g.closePath(); g.fill(); g.stroke();
+    // Brustflosse
+    g.beginPath();
+    g.moveTo(5, 3.5);
+    g.quadraticCurveTo(2, 10, -3, 10);
+    g.quadraticCurveTo(-1, 6, 0, 4);
+    g.closePath(); g.fill(); g.stroke();
+    // Auge und Lächeln
+    g.fillStyle = '#5a3a05';
+    g.beginPath(); g.arc(11, -2.5, 1.5, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#a8700a'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(14, 1.5); g.quadraticCurveTo(16.5, 2.5, 19, 1.4); g.stroke();
+    // Glanz
+    g.fillStyle = 'rgba(255,255,255,' + (0.5 + glanz * 0.4) + ')';
+    g.beginPath(); g.ellipse(-2, -6, 6, 1.6, -0.1, 0, Math.PI * 2); g.fill();
+    // Funkeln
+    if (glanz > 0.75) {
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const r = i % 2 === 0 ? 5 : 1.3, a = i * Math.PI / 4;
+        g.lineTo(16 + Math.cos(a) * r, -10 + Math.sin(a) * r);
+      }
+      g.closePath(); g.fill();
+    }
+    g.restore();
+  }
+
+  // Qualle: freche Augenbrauen, aber trotzdem süß. (0,0) ist der Boden unter ihr.
+  function maleQualle(g, u, ph) {
+    const wipp = ruhig ? 0 : Math.sin(zeit * 2.5 + ph) * u * 0.12;
+    const s = u / 36;
+    g.save();
+    g.translate(0, -u * 1.15 + wipp);
+    g.scale(s, s);
+    // Tentakel
+    g.strokeStyle = '#b07ad8'; g.lineWidth = 3; g.lineCap = 'round';
+    for (let i = -2; i <= 2; i++) {
+      const w = ruhig ? 0 : Math.sin(zeit * 4 + ph + i) * 4;
+      g.beginPath();
+      g.moveTo(i * 6, 4);
+      g.quadraticCurveTo(i * 6 + w, 14, i * 6 - w, 24);
+      g.stroke();
+    }
+    // Schirm
+    const v = g.createLinearGradient(0, -20, 0, 6);
+    v.addColorStop(0, '#e5b8ff');
+    v.addColorStop(1, '#b77ee6');
+    g.fillStyle = v;
+    g.beginPath();
+    g.moveTo(-20, 4);
+    g.bezierCurveTo(-22, -24, 22, -24, 20, 4);
+    for (let i = 0; i < 5; i++) g.quadraticCurveTo(16 - i * 8, 9, 12 - i * 8, 4);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.beginPath(); g.ellipse(-8, -11, 5, 3, -0.5, 0, Math.PI * 2); g.fill();
+    // Gesicht
+    g.fillStyle = '#2b1d3a';
+    g.beginPath(); g.arc(-7, -3, 2.6, 0, Math.PI * 2); g.arc(5, -3, 2.6, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(-6.2, -4, 0.9, 0, Math.PI * 2); g.arc(5.8, -4, 0.9, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#2b1d3a'; g.lineWidth = 1.8;
+    g.beginPath(); g.moveTo(-11, -9); g.lineTo(-4, -7); g.moveTo(9, -9); g.lineTo(2, -7); g.stroke();
+    g.beginPath(); g.moveTo(-3, 2); g.quadraticCurveTo(-1, 0.5, 1, 2); g.stroke();
+    g.restore();
+  }
+
+  // Krabbe mit Scheren. (0,0) ist der Boden unter ihr.
+  function maleKrabbe(g, u, ph) {
+    const s = u / 36;
+    const zwick = ruhig ? 0 : Math.sin(zeit * 6 + ph) * 0.25;
+    const tipp = ruhig ? 0 : Math.sin(zeit * 8 + ph) * 1.5;
+    g.save();
+    g.scale(s, s);
+    g.strokeStyle = '#c62828'; g.lineWidth = 3; g.lineCap = 'round';
+    // Beine
+    for (let i = 0; i < 3; i++) {
+      g.beginPath(); g.moveTo(-10, -10 + i * 3); g.lineTo(-20, -4 + i * 3 + (i % 2 ? tipp : -tipp)); g.lineTo(-23, 0); g.stroke();
+      g.beginPath(); g.moveTo(10, -10 + i * 3); g.lineTo(20, -4 + i * 3 + (i % 2 ? -tipp : tipp)); g.lineTo(23, 0); g.stroke();
+    }
+    // Arme und Scheren
+    [-1, 1].forEach((seite) => {
+      g.beginPath(); g.moveTo(seite * 12, -16); g.lineTo(seite * 20, -28); g.stroke();
+      g.save();
+      g.translate(seite * 21, -31);
+      g.fillStyle = '#ef5350';
+      g.beginPath(); g.ellipse(0, 0, 6, 5, 0, 0, Math.PI * 2); g.fill();
+      g.rotate(seite * zwick);
+      g.fillStyle = '#e53935';
+      g.beginPath(); g.ellipse(seite * 3, -5, 4, 3, seite * 0.5, 0, Math.PI * 2); g.fill();
+      g.restore();
+    });
+    // Körper
+    const v = g.createLinearGradient(0, -24, 0, -4);
+    v.addColorStop(0, '#ff7a6b');
+    v.addColorStop(1, '#e53935');
+    g.fillStyle = v;
+    g.beginPath(); g.ellipse(0, -14, 16, 10, 0, 0, Math.PI * 2); g.fill();
+    // Augen auf Stielen
+    g.strokeStyle = '#e53935'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(-5, -22); g.lineTo(-6, -29); g.moveTo(5, -22); g.lineTo(6, -29); g.stroke();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(-6, -31, 4, 0, Math.PI * 2); g.arc(6, -31, 4, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2b1d1d';
+    g.beginPath(); g.arc(-6.6, -31, 2, 0, Math.PI * 2); g.arc(5.4, -31, 2, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#7f1d1d'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(-10, -37); g.lineTo(-3, -35); g.moveTo(10, -37); g.lineTo(3, -35); g.stroke();
+    g.beginPath(); g.moveTo(-4, -11); g.quadraticCurveTo(0, -13, 4, -11); g.stroke();
+    g.restore();
+  }
+
+  // Die Babyschildkröte, mit Formen gemalt. (x, y) ist der Boden unter dem Panzer, Blick nach rechts.
+  // tritt: Laufschritt, schwimmt: 1 in der Luft (Flossen gespreizt), mund: > 0 Mund offen.
+  function maleSchildi(g, x, y, s, tritt, schwimmt, mund) {
+    const a = Math.sin(tritt) * 0.45;
+    g.save();
+    g.translate(x, y);
+    g.scale(s, s);
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    const haut = '#8fd694', hautDunkel = '#5fae69';
+
+    function flosse(fx, fy, winkel, lang, farbe) {
+      g.save();
+      g.translate(fx, fy);
+      g.rotate(winkel);
+      g.fillStyle = farbe;
+      g.beginPath(); g.ellipse(0, lang * 0.5, 5.5, lang * 0.55, 0, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+    // hintere Beine (weiter weg, dunkler)
+    if (schwimmt) {
+      flosse(-14, -10, 1.1, 16, hautDunkel);
+      flosse(14, -12, -1.0, 18, hautDunkel);
+    } else {
+      flosse(-12, -8, -a, 10, hautDunkel);
+      flosse(15, -8, a, 10, hautDunkel);
+    }
+    // Schwänzchen
+    g.fillStyle = haut;
+    g.beginPath(); g.moveTo(-25, -12); g.lineTo(-34, -8); g.lineTo(-24, -7); g.closePath(); g.fill();
+
+    // Kopf und Hals
+    const kopfX = 33, kopfY = -26 + (schwimmt ? 0 : Math.abs(Math.sin(tritt)) * -1.5);
+    g.fillStyle = haut;
+    g.beginPath(); g.ellipse(22, -17, 10, 7, -0.5, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.arc(kopfX, kopfY, 13, 0, Math.PI * 2); g.fill();
+    // Flecken auf dem Kopf
+    g.fillStyle = 'rgba(70, 150, 90, 0.35)';
+    g.beginPath(); g.arc(28, -35, 2.5, 0, Math.PI * 2); g.arc(34, -37, 2, 0, Math.PI * 2); g.fill();
+    // Auge: groß und glänzend
+    g.fillStyle = '#1f2a3a';
+    g.beginPath(); g.ellipse(37, kopfY - 3, 3.6, 4.4, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(38.3, kopfY - 4.8, 1.5, 0, Math.PI * 2); g.arc(36, kopfY - 1.2, 0.7, 0, Math.PI * 2); g.fill();
+    // Bäckchen
+    g.fillStyle = 'rgba(255, 130, 150, 0.55)';
+    g.beginPath(); g.ellipse(34, kopfY + 4, 3.4, 2.2, 0, 0, Math.PI * 2); g.fill();
+    // Mund
+    if (mund > 0) {
+      const auf = Math.sin(Math.min(1, mund / 0.4) * Math.PI) * 6 + 2;
+      g.fillStyle = '#7a2e3a';
+      g.beginPath();
+      g.moveTo(39, kopfY + 3);
+      g.lineTo(46.5, kopfY + 2 - auf * 0.4);
+      g.lineTo(46.5, kopfY + 3 + auf * 0.7);
+      g.closePath(); g.fill();
+    } else {
+      g.strokeStyle = '#2f5a35'; g.lineWidth = 1.6;
+      g.beginPath(); g.arc(41, kopfY + 1.5, 4, 0.3, 1.7); g.stroke();
+    }
+
+    // Panzer
+    g.fillStyle = '#f2e3a0';
+    g.beginPath(); g.ellipse(-1, -10, 26, 5, 0, 0, Math.PI * 2); g.fill();
+    const v = g.createLinearGradient(0, -40, 0, -8);
+    v.addColorStop(0, '#5cbf60');
+    v.addColorStop(1, '#2e8b4e');
+    g.fillStyle = v;
+    g.strokeStyle = '#21683a'; g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(-27, -10);
+    g.bezierCurveTo(-26, -44, 24, -44, 25, -10);
+    g.closePath(); g.fill(); g.stroke();
+    // Platten
+    g.fillStyle = '#86d27a';
+    g.strokeStyle = 'rgba(33, 104, 58, 0.6)'; g.lineWidth = 1.5;
+    const platte = (px, py, r) => {
+      g.beginPath();
+      for (let i = 0; i < 6; i++) { const w = i * Math.PI / 3 + Math.PI / 6; g.lineTo(px + Math.cos(w) * r, py + Math.sin(w) * r * 0.85); }
+      g.closePath(); g.fill(); g.stroke();
+    };
+    platte(-1, -26, 7);
+    platte(-14, -20, 5.5);
+    platte(12, -20, 5.5);
+    platte(-1, -14, 4.2);
+    // Glanz
+    g.fillStyle = 'rgba(255,255,255,0.35)';
+    g.beginPath(); g.ellipse(-8, -33, 7, 2.5, -0.35, 0, Math.PI * 2); g.fill();
+
+    // vordere Beine
+    if (schwimmt) {
+      flosse(-10, -10, 0.9, 16, haut);
+      flosse(17, -12, -1.25, 20, haut);
+    } else {
+      flosse(-9, -9, a, 10, haut);
+      flosse(18, -9, -a, 10, haut);
+    }
+    g.restore();
+  }
+
+  function bildNeu(jetzt) {
+    if ($('spiel').hidden) { laeuft = false; return; }
+    const dt = letzteZeit ? Math.min(0.05, (jetzt - letzteZeit) / 1000) : 0;
+    letzteZeit = jetzt;
+    schritt(dt);
+    male();
+    if (phase === 'aufgabe') maleLabyrinth(dt);
+    requestAnimationFrame(bildNeu);
+  }
+
+  // Bild auf dem Start-Bildschirm
+  function maleStartBild() {
+    const c = $('start-bild');
+    const g = c.getContext('2d');
+    const w = c.width, h = c.height;
+    const v = g.createLinearGradient(0, 0, 0, h);
+    v.addColorStop(0, '#8fdcee');
+    v.addColorStop(1, '#2f86bf');
+    g.fillStyle = v;
+    g.beginPath(); g.roundRect ? g.roundRect(0, 0, w, h, 40) : g.rect(0, 0, w, h); g.fill();
+    g.save();
+    g.beginPath(); g.roundRect ? g.roundRect(0, 0, w, h, 40) : g.rect(0, 0, w, h); g.clip();
+    g.fillStyle = '#f2d9a0';
+    g.fillRect(0, h * 0.78, w, h);
+    g.restore();
+    maleDelfinMuenze(g, w * 0.66, h * 0.32, 70, 1);
+    maleDelfinMuenze(g, w * 0.84, h * 0.5, 60, 2);
+    maleHerz(g, w * 0.86, h * 0.2, 46, 1);
+    maleSchildi(g, w * 0.36, h * 0.8, 3.0, 0, 0, 0);
+  }
+
+  /* ---------- Eingabe ---------- */
+
+  $('los').addEventListener('click', starte);
+  $('nochmal').addEventListener('click', starte);
+  $('weiter').addEventListener('click', weiter);
+  $('vorlesen').addEventListener('click', () => { if (phase === 'aufgabe') sprich(aufgaben[nummer].sprechen); });
+
+  // Knöpfe reagieren schon beim Antippen (pointerdown). Mit der Tastatur geht es über „click“.
+  function tat(knopf, aktion) {
+    let perZeiger = false;
+    knopf.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      perZeiger = true;
+      knopf.classList.add('gedrueckt');
+      aktion();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => knopf.addEventListener(n, () => knopf.classList.remove('gedrueckt')));
+    knopf.addEventListener('click', () => {
+      if (perZeiger) { perZeiger = false; return; }
+      aktion();
+    });
+    knopf.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  tat($('springen'), springe);
+  tat($('mampf'), mampf);
+  function springenAus() { $('springen').classList.remove('gedrueckt'); $('mampf').classList.remove('gedrueckt', 'wink'); }
+
+  document.querySelectorAll('.richtung').forEach((b) => {
+    b.addEventListener('click', () => geheLabyrinth(Number(b.dataset.dx), Number(b.dataset.dy)));
+  });
+  // Tippen ins Meer: Ist ein Gegner nah, wird er gemampft – sonst springt die Schildkröte.
+  leinwand.addEventListener('pointerdown', (e) => {
+    if (phase !== 'laufen') return;
+    e.preventDefault();
+    const tx = schildiX();
+    const vorn = vordersterGegner();
+    if (vorn && vorn.x - tx < einheit * 3.6) mampf();
+    else springe();
+  });
+
+  // Tastatur: ↑ oder W springt, M oder → mampft. Im Labyrinth laufen die Pfeiltasten.
+  window.addEventListener('keydown', (e) => {
+    if ($('spiel').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (phase === 'aufgabe') {
+      const a = aufgaben[nummer];
+      if (a.art === 'labyrinth') {
+        const r = { arrowleft: [-1, 0], a: [-1, 0], arrowright: [1, 0], d: [1, 0], arrowup: [0, -1], w: [0, -1], arrowdown: [0, 1], s: [0, 1] }[k];
+        if (r) { e.preventDefault(); geheLabyrinth(r[0], r[1]); }
+        return;
+      }
+      const knoepfe = [...$('antworten').children];
+      const zahl = Number(e.key);
+      if (zahl >= 1 && zahl <= knoepfe.length && a.art !== 'aepfel') { knoepfe[zahl - 1].click(); return; }
+      const treffer = knoepfe.find((b) => b.textContent.toLowerCase() === (k === '0' ? '10' : k));
+      if (treffer) treffer.click();
+      return;
+    }
+    if (phase !== 'laufen') return;
+    if (k === 'arrowup' || k === 'w') { e.preventDefault(); springe(); }
+    if (k === 'm' || k === 'arrowright') { e.preventDefault(); mampf(); }
+  });
+
+  if (window.ResizeObserver) new ResizeObserver(passeGroesseAn).observe($('meer'));
+  window.addEventListener('resize', passeGroesseAn);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (stimme) stimme.cancel(); letzteZeit = 0; }
+  });
+
+  maleStartBild();
+  zeigeRekord();
+  // Nach „Nochmal spielen“ soll der Rekord auf dem Start-Bildschirm stimmen, wenn man später zurückkommt.
+  window.addEventListener('pageshow', zeigeRekord);
+})();
+</script>
+</body>
+</html>
