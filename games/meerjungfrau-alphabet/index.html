@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meerjungfrauen-Alphabet</title>
+<style>
+  /* Farben des Spiels – hier lässt sich das Aussehen schnell ändern. */
+  :root {
+    color-scheme: light;
+    --wasser-hell: #bfeaf5;
+    --wasser: #4fb6d8;
+    --wasser-tief: #1c5f9c;
+    --karte: #ffffff;
+    --tinte: #23314f;
+    --tinte-leise: #4a5878;
+    --rand: #cfe3ee;
+    --blau: #2f6fb0;
+    --blau-dunkel: #24588d;
+    --gruen: #2e8b4e;
+    --gruen-hell: #dff2df;
+    --orange-hell: #ffeccf;
+    --orange: #b3541e;
+    --sonne: #ffd85e;
+    --koralle: #e8527a;
+    --koralle-dunkel: #b83a5d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh;
+    background: linear-gradient(var(--wasser-hell), var(--wasser) 55%, var(--wasser-tief));
+    background-attachment: fixed;
+    color: var(--tinte);
+    font-family: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    font-size: 1.25rem; line-height: 1.4;
+    display: flex; justify-content: center;
+  }
+  .bildschirm {
+    width: 100%; max-width: 720px; min-height: 100vh; min-height: 100dvh;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  }
+  .mitte { justify-content: center; }
+  h1 { margin: 0; font-size: clamp(2rem, 8vw, 3rem); line-height: 1.15; text-wrap: balance; }
+  p { margin: 0; }
+  .gross-bild { font-size: clamp(4.5rem, 22vw, 7rem); line-height: 1.1; }
+  .tafel {
+    width: 100%; padding: 26px 18px; border-radius: 30px; background: rgba(255, 255, 255, 0.9);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .leise { color: var(--tinte-leise); }
+
+  /* Knöpfe und Links */
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  .knopf {
+    min-height: 68px; padding: 14px 34px; border: 0; border-radius: 999px;
+    background: var(--blau); color: #fff; font-size: 1.5rem; font-weight: 700;
+    box-shadow: 0 5px 0 var(--blau-dunkel);
+  }
+  .knopf:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--blau-dunkel); }
+  .knopf.start { min-height: 84px; padding: 16px 48px; font-size: 1.9rem; background: var(--gruen); box-shadow: 0 5px 0 #1f6337; }
+  .heim {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 8px 18px;
+    border: 2px solid var(--rand); border-radius: 999px; background: var(--karte);
+    color: var(--tinte); font-size: 1.05rem; font-weight: 700; text-decoration: none; white-space: nowrap;
+  }
+  .heim:active { transform: translateY(2px); }
+  a:focus-visible, button:focus-visible { outline: 4px solid var(--sonne); outline-offset: 3px; }
+
+  /* Spiel-Bildschirm: Leiste, Meer, Pfeil-Knöpfe – alles passt auf eine Bildschirmhöhe. */
+  #spiel { max-width: 1000px; height: 100vh; height: 100dvh; gap: 10px; }
+  .leiste { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .zaehler {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 6px 18px; border-radius: 999px;
+    background: var(--karte); border: 2px solid var(--rand); font-weight: 700; font-size: 1.3rem; white-space: nowrap;
+  }
+  .zaehler.hops { animation: hops 0.25s; }
+  @keyframes hops { 50% { transform: scale(1.18); } }
+  .stand { width: 100%; display: flex; align-items: center; gap: 10px; }
+  .fortschritt {
+    flex: none; font-weight: 700; font-size: 1.05rem; white-space: nowrap;
+    padding: 2px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.85);
+  }
+  .balken { flex: 1; height: 14px; border-radius: 999px; background: var(--karte); border: 2px solid var(--rand); overflow: hidden; }
+  .balken div { height: 100%; width: 0; background: var(--sonne); transition: width 0.3s ease; }
+
+  .meer {
+    position: relative; width: 100%; flex: 1; min-height: 0;
+    border-radius: 26px; overflow: hidden; border: 3px solid rgba(255, 255, 255, 0.85);
+    background: var(--wasser);
+  }
+  .meer canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .steuer { width: 100%; display: flex; gap: 12px; }
+  .pfeil {
+    flex: 1; min-height: 76px; border: 0; border-radius: 24px; padding: 0;
+    background: var(--koralle); color: #fff; font-size: 2.4rem; font-weight: 700; line-height: 1;
+    box-shadow: 0 5px 0 var(--koralle-dunkel);
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .pfeil.gedrueckt { transform: translateY(3px); box-shadow: 0 2px 0 var(--koralle-dunkel); filter: brightness(1.1); }
+  .pfeil.wink { animation: wink 0.9s ease-in-out infinite; }
+  @keyframes wink { 50% { transform: translateY(-4px); filter: brightness(1.15); } }
+
+  /* Aufgabe: Karte über dem Meer */
+  .aufgabe {
+    position: absolute; inset: 0; overflow: auto;
+    display: flex; background: rgba(20, 60, 110, 0.45); padding: 12px;
+  }
+  .aufgabe-karte {
+    margin: auto; width: 100%; max-width: 560px; padding: 16px; border-radius: 26px;
+    background: var(--karte); border: 2px solid var(--rand);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .frage-zeile { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .frage-zeile h2 { margin: 0; font-size: clamp(1.4rem, 5.5vw, 1.9rem); line-height: 1.2; text-wrap: balance; }
+  .vorlesen {
+    flex: none; width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--rand);
+    background: var(--wasser-hell); font-size: 1.7rem; line-height: 1; padding: 0;
+  }
+  .vorlesen:active { transform: translateY(2px); }
+  .frage-bild { font-size: clamp(3.6rem, 16vw, 5.2rem); line-height: 1.15; }
+  .antworten { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .antwort {
+    min-height: 100px; padding: 8px; border-radius: 22px; border: 3px solid var(--rand);
+    background: var(--karte); font-size: clamp(2.6rem, 11vw, 3.4rem); font-weight: 700; line-height: 1.1;
+    box-shadow: 0 4px 0 var(--rand);
+  }
+  .antwort:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px 0 var(--rand); }
+  .antwort.richtig { background: var(--gruen-hell); border-color: var(--gruen); box-shadow: none; color: var(--tinte); opacity: 1; }
+  .antwort.falsch { background: var(--orange-hell); border-color: #e7b98c; box-shadow: none; opacity: 0.6; animation: wackeln 0.35s; }
+  .antwort:disabled { cursor: default; }
+  .antwort:disabled:not(.richtig):not(.falsch) { opacity: 0.5; box-shadow: none; }
+  @keyframes wackeln { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .rueckmeldung { min-height: 2.9em; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; line-height: 1.25; }
+  .rueckmeldung.gut { color: var(--gruen); }
+  .rueckmeldung.nochmal { color: var(--orange); }
+
+  /* Sehr niedrige Bildschirme (Handy quer): Die Aufgabe bekommt den ganzen Bildschirm. */
+  @media (max-height: 560px) {
+    .aufgabe { position: fixed; z-index: 5; }
+    .pfeil { min-height: 56px; font-size: 1.9rem; }
+  }
+
+  /* End-Bildschirm */
+  .sterne { max-width: 100%; display: flex; flex-wrap: wrap; justify-content: center; font-size: clamp(1.4rem, 6.4vw, 2.6rem); line-height: 1.3; }
+  .sterne .leer { filter: grayscale(1); opacity: 0.3; }
+  .beute { font-size: clamp(1.8rem, 8vw, 2.6rem); font-weight: 700; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .antwort.falsch, .zaehler.hops, .pfeil.wink { animation: none; }
+    .balken div { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 1. Start-Bildschirm -->
+<main class="bildschirm mitte" id="start">
+  <div class="tafel">
+    <div class="gross-bild" aria-hidden="true">🧜‍♀️</div>
+    <h1>Meerjungfrauen-Alphabet</h1>
+    <p class="leise" id="rekord" hidden></p>
+    <button class="knopf start" id="los" type="button">▶ Los!</button>
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+  </div>
+</main>
+
+<!-- 2. Spiel-Bildschirm -->
+<main class="bildschirm" id="spiel" hidden>
+  <div class="leiste">
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+    <span class="zaehler" id="zaehler" role="status" aria-label="Muscheln: 0">🐚 0</span>
+  </div>
+  <div class="stand">
+    <span class="fortschritt" id="fortschritt" aria-live="polite"></span>
+    <div class="balken" aria-hidden="true"><div id="balken"></div></div>
+  </div>
+  <div class="meer" id="meer">
+    <canvas id="bild" role="img" aria-label="Die Meerjungfrau schwimmt durch das Meer und sammelt Muscheln."></canvas>
+    <div class="aufgabe" id="aufgabe" hidden>
+      <div class="aufgabe-karte">
+        <div class="frage-zeile">
+          <h2 id="frage"></h2>
+          <button class="vorlesen" id="vorlesen" type="button" aria-label="Frage vorlesen">🔊</button>
+        </div>
+        <div class="frage-bild" id="frage-bild" aria-hidden="true"></div>
+        <div class="antworten" id="antworten"></div>
+        <p class="rueckmeldung" id="rueckmeldung" role="status" aria-live="polite"></p>
+        <button class="knopf" id="weiter" type="button" hidden>Weiter ➡️</button>
+      </div>
+    </div>
+  </div>
+  <div class="steuer">
+    <button class="pfeil" id="hoch" type="button" aria-label="Nach oben schwimmen">⬆️</button>
+    <button class="pfeil" id="runter" type="button" aria-label="Nach unten schwimmen">⬇️</button>
+  </div>
+</main>
+
+<!-- 3. End-Bildschirm -->
+<main class="bildschirm mitte" id="ende" hidden>
+  <div class="tafel">
+    <div class="gross-bild" aria-hidden="true">🎉</div>
+    <h1>Geschafft!</h1>
+    <p class="beute" id="beute"></p>
+    <div class="sterne" id="sterne" aria-hidden="true"></div>
+    <p id="ergebnis"></p>
+    <button class="knopf start" id="nochmal" type="button">🔁 Nochmal spielen</button>
+    <a class="heim" href="../../">🏠 Alle Spiele</a>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Inhalt des Spiels ---------- */
+
+  // Eigener Speicher-Schlüssel für dieses Spiel.
+  const SPEICHER = 'lernspiele.meerjungfrau-alphabet';
+
+  const AUFGABEN_ZAHL = 10;       // Aufgaben pro Runde
+  const MUSCHELN_PRO_STRECKE = 9; // Muscheln zwischen zwei Aufgaben
+  const BONUS = 5;                // Muscheln aus der Schatztruhe
+
+  // Wörter mit klarem Anfangslaut. Der Buchstabe dient auch für „Wo ist das M?“.
+  const WOERTER = [
+    { b: 'A', wort: 'Apfel', bild: '🍎' },
+    { b: 'B', wort: 'Banane', bild: '🍌' },
+    { b: 'D', wort: 'Dino', bild: '🦖' },
+    { b: 'E', wort: 'Elefant', bild: '🐘' },
+    { b: 'F', wort: 'Fisch', bild: '🐟' },
+    { b: 'G', wort: 'Giraffe', bild: '🦒' },
+    { b: 'H', wort: 'Hund', bild: '🐶' },
+    { b: 'I', wort: 'Igel', bild: '🦔' },
+    { b: 'K', wort: 'Katze', bild: '🐱' },
+    { b: 'L', wort: 'Löwe', bild: '🦁' },
+    { b: 'M', wort: 'Maus', bild: '🐭' },
+    { b: 'N', wort: 'Nase', bild: '👃' },
+    { b: 'O', wort: 'Oma', bild: '👵' },
+    { b: 'P', wort: 'Pinguin', bild: '🐧' },
+    { b: 'R', wort: 'Rakete', bild: '🚀' },
+    { b: 'S', wort: 'Sonne', bild: '☀️' },
+    { b: 'T', wort: 'Tiger', bild: '🐯' },
+    { b: 'U', wort: 'Uhr', bild: '⏰' },
+    { b: 'W', wort: 'Wal', bild: '🐳' },
+    { b: 'Z', wort: 'Zebra', bild: '🦓' },
+  ];
+
+  const NOCHMAL_TEXTE = ['Fast! Versuch es noch einmal.', 'Noch nicht ganz. Probier es noch mal!', 'Hör noch einmal genau hin.'];
+
+  /* ---------- Helfer ---------- */
+
+  const $ = (id) => document.getElementById(id);
+  const bildschirme = ['start', 'spiel', 'ende'];
+  function zeige(name) {
+    bildschirme.forEach((b) => { $(b).hidden = b !== name; });
+    window.scrollTo(0, 0);
+  }
+  const zufall = (a, b) => a + Math.random() * (b - a);
+  const klemme = (x, a, b) => Math.max(a, Math.min(b, x));
+  function mische(liste) {
+    const l = liste.slice();
+    for (let i = l.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [l[i], l[j]] = [l[j], l[i]];
+    }
+    return l;
+  }
+  const ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Vorlesen mit der Stimme des Geräts (ohne Internet). Fehlt sie, bleibt das Spiel still.
+  const stimme = window.speechSynthesis || null;
+  let kannSprechen = !!(stimme && window.SpeechSynthesisUtterance);
+  function sprich(text) {
+    if (!kannSprechen) return;
+    try {
+      stimme.cancel();
+      const s = new SpeechSynthesisUtterance(text);
+      s.lang = 'de-DE';
+      s.rate = 0.9;
+      s.onerror = (e) => {
+        // Abgebrochen ist normal (neuer Satz). Alles andere heißt: Dieses Gerät kann nicht sprechen.
+        if (e.error === 'interrupted' || e.error === 'canceled') return;
+        kannSprechen = false;
+        zeigeFrageText();
+      };
+      stimme.speak(s);
+    } catch (e) { kannSprechen = false; zeigeFrageText(); }
+  }
+
+  // Kleine Töne.
+  let audio = null;
+  function ton(frequenz, dauer, wann, laut) {
+    if (!audio) return;
+    try {
+      const t = audio.currentTime + (wann || 0);
+      const o = audio.createOscillator();
+      const g = audio.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(frequenz, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(laut || 0.2, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dauer);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + dauer + 0.05);
+    } catch (e) { /* ohne Ton weiterspielen */ }
+  }
+
+  function ladeRekord() {
+    try { return JSON.parse(localStorage.getItem(SPEICHER) || '{}').rekord || 0; } catch (e) { return 0; }
+  }
+  function merkeRekord(wert) {
+    try { if (wert > ladeRekord()) localStorage.setItem(SPEICHER, JSON.stringify({ rekord: wert })); } catch (e) { /* egal */ }
+  }
+  function zeigeRekord() {
+    const r = ladeRekord();
+    $('rekord').hidden = r < 1;
+    $('rekord').textContent = 'Dein Rekord: ' + r + ' 🐚';
+  }
+
+  /* ---------- Spielstand ---------- */
+
+  let aufgaben = [];
+  let nummer = 0;          // Nummer der nächsten Aufgabe, ab 0
+  let sterne = 0;          // richtig beim ersten Versuch
+  let muscheln = 0;
+  let ersterVersuch = true;
+  let geloest = false;
+  let phase = 'aus';       // 'schwimmen' | 'truhe' (Truhe kommt ins Bild) | 'aufgabe' | 'aus'
+  let streckeMuscheln = 0; // schon losgeschickte Muscheln dieser Strecke
+
+  function baueAufgaben() {
+    const wahl = mische(WOERTER).slice(0, AUFGABEN_ZAHL);
+    return wahl.map((w, i) => {
+      const andere = mische(WOERTER.filter((x) => x.b !== w.b)).slice(0, 2).map((x) => x.b);
+      const antworten = mische([w.b, ...andere]);
+      const art = i % 2 === 0 ? 'finden' : 'anlaut';
+      return art === 'finden'
+        ? {
+          art, antworten, richtig: antworten.indexOf(w.b), b: w.b,
+          text: 'Hör genau hin!', textStumm: 'Wo ist das ' + w.b + '?', bild: '👂', bildStumm: w.b.toLowerCase(),
+          sprechen: 'Wo ist das ' + w.b + '?',
+          erklaerung: 'Genau! Das ist das ' + w.b + '.',
+        }
+        : {
+          art, antworten, richtig: antworten.indexOf(w.b), b: w.b,
+          text: 'Womit fängt es an?', textStumm: 'Womit fängt es an?', bild: w.bild, bildStumm: w.bild,
+          sprechen: w.wort + '. Womit fängt ' + w.wort + ' an?',
+          erklaerung: 'Genau! ' + w.wort + ' fängt mit ' + w.b + ' an.',
+        };
+    });
+  }
+
+  function zeigeStand() {
+    const n = Math.min(nummer + 1, AUFGABEN_ZAHL);
+    $('fortschritt').textContent = 'Aufgabe ' + n + ' / ' + AUFGABEN_ZAHL;
+    const z = $('zaehler');
+    z.textContent = '🐚 ' + muscheln;
+    z.setAttribute('aria-label', 'Muscheln: ' + muscheln);
+  }
+  function zaehlerHops() {
+    const z = $('zaehler');
+    z.classList.remove('hops');
+    void z.offsetWidth;
+    z.classList.add('hops');
+  }
+
+  function starte() {
+    if (!audio) {
+      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+    }
+    aufgaben = baueAufgaben();
+    nummer = 0; sterne = 0; muscheln = 0;
+    $('balken').style.width = '0%';
+    $('aufgabe').hidden = true;
+    zeige('spiel');
+    passeGroesseAn();
+    neueWelt();
+    zeigeStand();
+    phase = 'schwimmen';
+    $('hoch').classList.add('wink');
+    $('runter').classList.add('wink');
+    sprich('Schwimm mit den Pfeilen hoch und runter. Sammle die Muscheln!');
+    letzteZeit = 0;
+    if (!laeuft) { laeuft = true; requestAnimationFrame(bildNeu); }
+  }
+
+  /* ---------- Aufgabe ---------- */
+
+  // Ohne Stimme zeigt „Wo ist das M?“ den kleinen Buchstaben – dann sucht man den großen dazu.
+  function zeigeFrageText() {
+    if (phase !== 'aufgabe') return;
+    const a = aufgaben[nummer];
+    $('frage').textContent = kannSprechen ? a.text : a.textStumm;
+    $('frage-bild').textContent = kannSprechen ? a.bild : a.bildStumm;
+  }
+
+  function zeigeAufgabe() {
+    const a = aufgaben[nummer];
+    phase = 'aufgabe';
+    ersterVersuch = true;
+    geloest = false;
+    zeigeFrageText();
+    $('rueckmeldung').textContent = '';
+    $('rueckmeldung').className = 'rueckmeldung';
+    $('weiter').hidden = true;
+    const feld = $('antworten');
+    feld.textContent = '';
+    a.antworten.forEach((text, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'antwort';
+      b.textContent = text;
+      b.addEventListener('click', () => antworte(i, b));
+      feld.appendChild(b);
+    });
+    $('aufgabe').hidden = false;
+    $('aufgabe').scrollTop = 0;
+    [392, 523.25].forEach((hz, k) => ton(hz, 0.25, k * 0.12));
+    sprich(a.sprechen);
+  }
+
+  function antworte(i, knopf) {
+    if (phase !== 'aufgabe' || geloest || knopf.disabled) return;
+    const a = aufgaben[nummer];
+    const meldung = $('rueckmeldung');
+    if (i !== a.richtig) {
+      // Falsch: freundlich bleiben, die Antwort sperren, neuer Versuch.
+      ersterVersuch = false;
+      knopf.disabled = true;
+      knopf.classList.add('falsch');
+      const text = NOCHMAL_TEXTE[Math.floor(Math.random() * NOCHMAL_TEXTE.length)];
+      meldung.textContent = '💪 ' + text;
+      meldung.className = 'rueckmeldung nochmal';
+      ton(220, 0.25);
+      sprich(text);
+      return;
+    }
+    // Richtig: kurze Erklärung, dann weiter.
+    geloest = true;
+    if (ersterVersuch) sterne++;
+    [...$('antworten').children].forEach((b) => { b.disabled = true; });
+    knopf.classList.add('richtig');
+    meldung.textContent = '✅ ' + a.erklaerung;
+    meldung.className = 'rueckmeldung gut';
+    [523.25, 659.25, 783.99].forEach((hz, k) => ton(hz, 0.3, k * 0.1));
+    sprich(a.erklaerung);
+    $('balken').style.width = ((nummer + 1) / AUFGABEN_ZAHL * 100) + '%';
+    const weiter = $('weiter');
+    weiter.textContent = nummer + 1 < AUFGABEN_ZAHL ? 'Weiter ➡️' : 'Fertig 🎉';
+    weiter.hidden = false;
+    weiter.focus({ preventScroll: true });
+    weiter.scrollIntoView({ block: 'nearest' });
+  }
+
+  function weiter() {
+    if (phase !== 'aufgabe' || !geloest) return;
+    // Die Truhe geht auf und schenkt Muscheln.
+    if (truhe) {
+      truhe.offen = true;
+      funken.push({ x: truhe.x, y: sandY - einheit * 1.5, t: 0, text: '+' + BONUS + ' 🐚' });
+    }
+    muscheln += BONUS;
+    zaehlerHops();
+    nummer++;
+    $('aufgabe').hidden = true;
+    if (nummer >= AUFGABEN_ZAHL) { zeigeEnde(); return; }
+    [659.25, 783.99, 1046.5].forEach((hz, k) => ton(hz, 0.2, k * 0.07, 0.12));
+    zeigeStand();
+    streckeMuscheln = 0;
+    abstandMuschel = tempo * 0.8;
+    phase = 'schwimmen';
+    $('hoch').focus({ preventScroll: true });
+  }
+
+  function zeigeEnde() {
+    phase = 'aus';
+    hoch = false; runter = false;
+    merkeRekord(muscheln);
+    $('beute').textContent = '🐚 ' + muscheln;
+    const feld = $('sterne');
+    feld.textContent = '';
+    for (let i = 0; i < AUFGABEN_ZAHL; i++) {
+      const s = document.createElement('span');
+      s.textContent = '⭐';
+      if (i >= sterne) s.className = 'leer';
+      feld.appendChild(s);
+    }
+    const text = 'Du hast ' + muscheln + ' Muscheln und ' + sterne + (sterne === 1 ? ' Stern' : ' Sterne') + ' gesammelt.';
+    $('ergebnis').textContent = text;
+    zeige('ende');
+    [523.25, 587.33, 659.25, 783.99, 1046.5].forEach((hz, k) => ton(hz, 0.35, k * 0.13));
+    sprich('Geschafft! ' + text);
+    $('nochmal').focus({ preventScroll: true });
+  }
+
+  /* ---------- Das Meer (Zeichenfläche) ---------- */
+
+  const leinwand = $('bild');
+  const ctx = leinwand.getContext('2d');
+  const EMOJI = 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  let W = 300, H = 300;    // Größe in CSS-Pixeln
+  let einheit = 40;        // Grundmaß für alle Figuren
+  let sandY = 260;         // Oberkante des Sandbodens
+  let tempo = 150;         // Pixel pro Sekunde, mit denen das Meer vorbeizieht
+
+  let nixe = { y: 150, vy: 0 };
+  let hoch = false, runter = false;
+  let muschelListe = [];   // { x, y, weg }
+  let kulisse = [];        // { x, art, h, phase, farbe }
+  let fische = [];         // { x, y, v, bild, gr }
+  let blasen = [];         // { x, y, r, v }
+  let funken = [];         // { x, y, t, text }
+  let truhe = null;        // { x, offen }
+  let lauf = 0;            // gesamte Strecke in Pixeln
+  let zeit = 0;
+  let abstandMuschel = 0;  // Pixel bis zur nächsten Muschel
+  let abstandKulisse = 0;
+  let muschelZiel = 0.5;   // Höhe der nächsten Muschel (0 oben … 1 unten)
+  let laeuft = false;
+  let letzteZeit = 0;
+
+  function passeGroesseAn() {
+    const r = $('meer').getBoundingClientRect();
+    if (r.width < 10 || r.height < 10) return;
+    const altH = H;
+    W = r.width; H = r.height;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    leinwand.width = Math.round(W * dpr);
+    leinwand.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    einheit = klemme(Math.min(W, H) * 0.11, 30, 62);
+    sandY = H - Math.max(36, H * 0.11);
+    tempo = klemme(W * 0.3, 120, 300);
+    // Alles, was eine Höhe hat, wandert mit.
+    const f = H / altH;
+    nixe.y *= f;
+    muschelListe.forEach((m) => { m.y *= f; });
+    fische.forEach((x) => { x.y *= f; });
+    blasen.forEach((x) => { x.y *= f; });
+  }
+
+  function neueWelt() {
+    nixe = { y: H * 0.45, vy: 0 };
+    hoch = false; runter = false;
+    muschelListe = []; kulisse = []; fische = []; blasen = []; funken = [];
+    truhe = null;
+    lauf = 0; zeit = 0;
+    streckeMuscheln = 0;
+    abstandMuschel = tempo * 1.6;
+    abstandKulisse = 0;
+    muschelZiel = 0.5;
+    for (let x = 30; x < W; x += zufall(90, 170)) neueKulisse(x);
+    for (let i = 0; i < 4; i++) neuerFisch(zufall(0, W));
+    for (let i = 0; i < 10; i++) blasen.push({ x: zufall(0, W), y: zufall(0, H), r: zufall(2, 6), v: zufall(20, 50) });
+  }
+
+  function neueKulisse(x) {
+    const wahl = Math.random();
+    const art = wahl < 0.5 ? 'gras' : wahl < 0.8 ? 'koralle' : 'stein';
+    const farben = art === 'gras' ? ['#2f9e6a', '#3fb37c', '#248a5a'] : art === 'koralle' ? ['#ff7f9c', '#ff9d5c', '#c77dff'] : ['#7f93a8', '#93a5b8'];
+    kulisse.push({ x, art, h: zufall(0.9, 1.7), phase: zufall(0, 6), farbe: farben[Math.floor(Math.random() * farben.length)] });
+  }
+  function neuerFisch(x) {
+    const bilder = ['🐟', '🐠', '🐡'];
+    fische.push({ x, y: zufall(H * 0.08, sandY - 40), v: zufall(0.35, 0.7), bild: bilder[Math.floor(Math.random() * bilder.length)], gr: zufall(0.45, 0.75) });
+  }
+
+  const nixeX = () => Math.max(einheit * 2.7, W * 0.24);
+
+  function schritt(dt) {
+    zeit += dt;
+    const oben = einheit * 0.75;
+    const unten = sandY - einheit * 0.45;
+
+    // Meerjungfrau: weich beschleunigen und bremsen.
+    const ziel = (runter ? 1 : 0) - (hoch ? 1 : 0);
+    const vMax = Math.max(220, H * 0.62);
+    nixe.vy += (ziel * vMax - nixe.vy) * Math.min(1, dt * 9);
+    nixe.y = klemme(nixe.y + nixe.vy * dt, oben, unten);
+    if (nixe.y === oben || nixe.y === unten) nixe.vy *= 0.5;
+
+    // Blasen steigen immer.
+    blasen.forEach((b) => {
+      b.y -= b.v * dt;
+      if (b.y < -10) { b.y = H + 10; b.x = zufall(0, W); }
+    });
+    funken.forEach((f) => { f.t += dt; });
+    funken = funken.filter((f) => f.t < 0.9);
+
+    const zieht = phase === 'schwimmen' || phase === 'truhe';
+    const weg = zieht ? tempo * dt : 0;
+    lauf += weg;
+
+    fische.forEach((f) => { f.x -= (weg * 0.5) + f.v * 30 * dt; });
+    fische = fische.filter((f) => f.x > -60);
+    while (fische.length < 4) neuerFisch(W + zufall(40, 300));
+
+    if (!zieht) return;
+
+    kulisse.forEach((k) => { k.x -= weg; });
+    kulisse = kulisse.filter((k) => k.x > -120);
+    abstandKulisse -= weg;
+    if (abstandKulisse <= 0) { neueKulisse(W + 80); abstandKulisse = zufall(90, 190); }
+
+    muschelListe.forEach((m) => { m.x -= weg; });
+    if (truhe) truhe.x -= weg;
+    if (truhe && truhe.x < -einheit * 3) truhe = null;
+
+    // Muscheln einsammeln – großzügig, damit es leicht gelingt.
+    const nx = nixeX();
+    const reich = einheit * 1.05;
+    muschelListe.forEach((m) => {
+      if (m.weg) return;
+      const dx = m.x - (nx + einheit * 0.2), dy = m.y - nixe.y;
+      if (dx * dx + dy * dy < reich * reich) {
+        m.weg = true;
+        muscheln++;
+        zeigeStand();
+        zaehlerHops();
+        funken.push({ x: m.x, y: m.y, t: 0, text: '✨' });
+        ton(880 + (muscheln % 5) * 110, 0.14, 0, 0.12);
+        $('hoch').classList.remove('wink');
+        $('runter').classList.remove('wink');
+      }
+    });
+    muschelListe = muschelListe.filter((m) => !m.weg && m.x > -50);
+
+    if (phase === 'schwimmen') {
+      abstandMuschel -= weg;
+      if (abstandMuschel <= 0) {
+        if (streckeMuscheln < MUSCHELN_PRO_STRECKE) {
+          // Die nächste Muschel liegt nie weit von der letzten – man kann ihr gut folgen.
+          muschelZiel = klemme(muschelZiel + zufall(-0.3, 0.3), 0.08, 0.92);
+          muschelListe.push({ x: W + 40, y: oben + muschelZiel * (unten - oben) });
+          streckeMuscheln++;
+          abstandMuschel = tempo * 0.8;
+        } else {
+          truhe = { x: W + einheit * 1.5, offen: false };
+          phase = 'truhe';
+        }
+      }
+    } else if (phase === 'truhe' && truhe && truhe.x <= Math.max(W * 0.7, nixeX() + einheit * 2.6)) {
+      zeigeAufgabe();
+    }
+  }
+
+  /* ---------- Zeichnen ---------- */
+
+  function male() {
+    // Wasser
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#8fdcee');
+    g.addColorStop(0.5, '#3da6d0');
+    g.addColorStop(1, '#1a5a99');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Lichtstrahlen
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 4; i++) {
+      const x = W * (0.1 + i * 0.26) + (ruhig ? 0 : Math.sin(zeit * 0.4 + i) * 14);
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x + W * 0.09, 0);
+      ctx.lineTo(x - W * 0.08, H); ctx.lineTo(x - W * 0.26, H);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    // Fische im Hintergrund
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    fische.forEach((f) => {
+      ctx.font = Math.round(einheit * f.gr) + 'px ' + EMOJI;
+      ctx.fillText(f.bild, f.x, f.y + (ruhig ? 0 : Math.sin(zeit * 1.3 + f.x * 0.01) * 4));
+    });
+    ctx.restore();
+
+    // Blasen
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1.5;
+    blasen.forEach((b) => {
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+    ctx.restore();
+
+    // Sandboden
+    ctx.fillStyle = '#f2d9a0';
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W + 20; x += 20) ctx.lineTo(x, sandY + Math.sin((x + lauf) * 0.012) * 6);
+    ctx.lineTo(W, H);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e3c27f';
+    for (let i = 0; i < 12; i++) {
+      const x = ((i * 137 - lauf) % (W + 40) + W + 40) % (W + 40) - 20;
+      ctx.beginPath(); ctx.ellipse(x, sandY + 16 + (i % 3) * 9, 7, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    kulisse.forEach(maleKulisse);
+    if (truhe) maleTruhe(truhe);
+
+    // Muscheln
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = Math.round(einheit * 0.95) + 'px ' + EMOJI;
+    muschelListe.forEach((m) => {
+      const wipp = ruhig ? 0 : Math.sin(zeit * 3 + m.x * 0.02) * 4;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255, 244, 180, 0.95)'; ctx.shadowBlur = 16;
+      ctx.fillText('🐚', m.x, m.y + wipp);
+      ctx.restore();
+    });
+
+    maleNixe(nixeX(), nixe.y);
+
+    // Funken und „+5 🐚“
+    funken.forEach((f) => {
+      ctx.save();
+      ctx.globalAlpha = 1 - f.t / 0.9;
+      ctx.font = '700 ' + Math.round(einheit * (f.text.length > 2 ? 0.7 : 0.8)) + 'px ' + EMOJI;
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = 'rgba(20,60,110,0.7)'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+      const y = f.y - f.t * einheit * 1.4;
+      if (f.text.length > 2) ctx.strokeText(f.text, f.x, y);
+      ctx.fillText(f.text, f.x, y);
+      ctx.restore();
+    });
+  }
+
+  function maleKulisse(k) {
+    const u = einheit * k.h;
+    const boden = sandY + 8;
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (k.art === 'gras') {
+      ctx.strokeStyle = k.farbe;
+      ctx.lineWidth = Math.max(5, u * 0.16);
+      for (let i = -1; i <= 1; i++) {
+        const schwank = ruhig ? 0 : Math.sin(zeit * 1.5 + k.phase + i) * u * 0.28;
+        const hoehe = u * (1.6 - Math.abs(i) * 0.45);
+        ctx.beginPath();
+        ctx.moveTo(k.x + i * u * 0.28, boden);
+        ctx.quadraticCurveTo(k.x + i * u * 0.28 - schwank * 0.5, boden - hoehe * 0.5, k.x + i * u * 0.28 + schwank, boden - hoehe);
+        ctx.stroke();
+      }
+    } else if (k.art === 'koralle') {
+      ctx.strokeStyle = k.farbe;
+      ctx.lineWidth = Math.max(7, u * 0.2);
+      const ast = (x1, y1, x2, y2) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); };
+      ast(k.x, boden, k.x, boden - u * 0.9);
+      ast(k.x, boden - u * 0.35, k.x - u * 0.42, boden - u * 0.75);
+      ast(k.x, boden - u * 0.5, k.x + u * 0.4, boden - u * 0.95);
+      ast(k.x - u * 0.42, boden - u * 0.75, k.x - u * 0.42, boden - u * 1.05);
+    } else {
+      ctx.fillStyle = k.farbe;
+      ctx.beginPath(); ctx.ellipse(k.x, boden, u * 0.6, u * 0.36, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath(); ctx.ellipse(k.x - u * 0.18, boden - u * 0.18, u * 0.2, u * 0.08, -0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function maleTruhe(t) {
+    const u = einheit;
+    const b = u * 1.7, h = u * 0.85;
+    const x = t.x - b / 2, y = sandY + 8 - h;
+    ctx.save();
+    if (!t.offen) {
+      // Leuchten, damit man sie kommen sieht
+      ctx.fillStyle = 'rgba(255, 232, 130, ' + (0.3 + (ruhig ? 0 : Math.sin(zeit * 4) * 0.12)) + ')';
+      ctx.beginPath(); ctx.arc(t.x, y - u * 0.1, u * 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    // Kasten
+    ctx.fillStyle = '#a0612b';
+    ctx.strokeStyle = '#6f3f17'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.rect(x, y, b, h); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f2c230';
+    ctx.fillRect(x + b * 0.12, y, b * 0.09, h);
+    ctx.fillRect(x + b * 0.79, y, b * 0.09, h);
+    // Deckel
+    ctx.save();
+    ctx.translate(x, y);
+    if (t.offen) ctx.rotate(-1.05);
+    ctx.fillStyle = '#b8742f';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(0, -h * 0.3);
+    ctx.quadraticCurveTo(b / 2, -h * 0.95, b, -h * 0.3);
+    ctx.lineTo(b, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f2c230';
+    ctx.fillRect(b * 0.12, -h * 0.5, b * 0.09, h * 0.5);
+    ctx.fillRect(b * 0.79, -h * 0.5, b * 0.09, h * 0.5);
+    ctx.restore();
+    if (t.offen) {
+      // Perlen und Glanz
+      ctx.fillStyle = '#fff7d6';
+      for (let i = 0; i < 5; i++) {
+        ctx.beginPath(); ctx.arc(x + b * (0.2 + i * 0.15), y + 2 - (i % 2) * 5, u * 0.13, 0, Math.PI * 2); ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = '#f2c230';
+      ctx.beginPath(); ctx.arc(t.x, y + h * 0.12, u * 0.14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Die Meerjungfrau: mit Formen gemalt, damit sie auf jedem Gerät gleich aussieht.
+  function maleNixe(x, y) {
+    const s = einheit / 34;
+    const neigung = klemme(nixe.vy / Math.max(220, H * 0.62), -1, 1) * 0.42;
+    const w = ruhig ? 0 : Math.sin(zeit * 7) * 7;        // Flossenschlag
+    const hw = ruhig ? 0 : Math.sin(zeit * 4 + 1) * 3;   // Haare wehen
+    ctx.save();
+    ctx.translate(x, y + (ruhig ? 0 : Math.sin(zeit * 2.2) * 3));
+    ctx.rotate(neigung);
+    ctx.scale(s, s);
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+    // Haare hinten
+    ctx.fillStyle = '#e8527a';
+    ctx.beginPath();
+    ctx.moveTo(34, -20);
+    ctx.quadraticCurveTo(18, -30, 4, -20);
+    ctx.quadraticCurveTo(-14, -16 + hw, -34, -20 + hw * 2);
+    ctx.quadraticCurveTo(-22, -8 + hw, -30, 2 + hw * 2);
+    ctx.quadraticCurveTo(-6, 0, 10, -6);
+    ctx.quadraticCurveTo(22, -4, 30, -8);
+    ctx.closePath(); ctx.fill();
+
+    // Schwanzflosse
+    ctx.fillStyle = '#35c9b4';
+    ctx.beginPath();
+    ctx.moveTo(-54, w);
+    ctx.quadraticCurveTo(-64, w - 20, -80, w - 20 + w * 0.5);
+    ctx.quadraticCurveTo(-70, w, -80, w + 20 + w * 0.5);
+    ctx.quadraticCurveTo(-64, w + 20, -54, w);
+    ctx.closePath(); ctx.fill();
+
+    // Fischschwanz
+    const verlauf = ctx.createLinearGradient(0, 0, -58, 0);
+    verlauf.addColorStop(0, '#1fa6a0');
+    verlauf.addColorStop(1, '#49d6bd');
+    ctx.fillStyle = verlauf;
+    ctx.beginPath();
+    ctx.moveTo(2, -11);
+    ctx.quadraticCurveTo(-28, -14 + w * 0.3, -57, w - 3);
+    ctx.lineTo(-57, w + 3);
+    ctx.quadraticCurveTo(-28, 14 + w * 0.3, 2, 11);
+    ctx.closePath(); ctx.fill();
+    // Schuppen
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1.6;
+    for (let i = 0; i < 4; i++) {
+      const sx = -8 - i * 11, sy = w * 0.08 * i;
+      ctx.beginPath(); ctx.arc(sx, sy - 3, 4, 0.2, Math.PI - 0.2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx - 5, sy + 4, 4, 0.2, Math.PI - 0.2); ctx.stroke();
+    }
+
+    // Oberkörper
+    ctx.fillStyle = '#ffd3b0';
+    ctx.beginPath(); ctx.ellipse(8, 0, 12, 10, 0, 0, Math.PI * 2); ctx.fill();
+    // Oberteil
+    ctx.fillStyle = '#a66bdc';
+    ctx.beginPath(); ctx.ellipse(10, 0, 7, 10.2, 0, 0, Math.PI * 2); ctx.fill();
+    // Gürtel am Übergang
+    ctx.fillStyle = '#ffd85e';
+    ctx.beginPath(); ctx.ellipse(0, 0, 3, 11, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Arm nach vorn
+    ctx.strokeStyle = '#ffd3b0'; ctx.lineWidth = 5.5;
+    ctx.beginPath(); ctx.moveTo(13, 5); ctx.quadraticCurveTo(24, 13, 38, 9 + w * 0.2); ctx.stroke();
+
+    // Kopf
+    ctx.fillStyle = '#ffd3b0';
+    ctx.beginPath(); ctx.arc(26, -8, 12, 0, Math.PI * 2); ctx.fill();
+    // Haare oben
+    ctx.fillStyle = '#e8527a';
+    ctx.beginPath();
+    ctx.moveTo(37, -13);
+    ctx.quadraticCurveTo(34, -24, 22, -22);
+    ctx.quadraticCurveTo(10, -20, 12, -4);
+    ctx.quadraticCurveTo(18, -12, 26, -14);
+    ctx.quadraticCurveTo(32, -15, 37, -13);
+    ctx.closePath(); ctx.fill();
+    // Seestern im Haar
+    ctx.fillStyle = '#ffd85e';
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 5.5 : 2.4, a = -Math.PI / 2 + i * Math.PI / 5;
+      ctx.lineTo(17 + Math.cos(a) * r, -18 + Math.sin(a) * r);
+    }
+    ctx.closePath(); ctx.fill();
+    // Gesicht
+    ctx.fillStyle = '#23314f';
+    ctx.beginPath(); ctx.arc(31, -9, 1.9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#b3475a'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(30, -5.5, 4, 0.25, 1.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 120, 140, 0.45)';
+    ctx.beginPath(); ctx.arc(26, -4, 2.6, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  function bildNeu(jetzt) {
+    if ($('spiel').hidden) { laeuft = false; return; }
+    const dt = letzteZeit ? Math.min(0.05, (jetzt - letzteZeit) / 1000) : 0;
+    letzteZeit = jetzt;
+    schritt(dt);
+    male();
+    requestAnimationFrame(bildNeu);
+  }
+
+  /* ---------- Eingabe ---------- */
+
+  $('los').addEventListener('click', starte);
+  $('nochmal').addEventListener('click', starte);
+  $('weiter').addEventListener('click', weiter);
+  $('vorlesen').addEventListener('click', () => { if (phase === 'aufgabe') sprich(aufgaben[nummer].sprechen); });
+
+  // Pfeil-Knöpfe: gedrückt halten = schwimmen. Geht mit Finger, Maus und Tastatur.
+  function halte(knopf, setze) {
+    const an = () => { setze(true); knopf.classList.add('gedrueckt'); };
+    const aus = () => { setze(false); knopf.classList.remove('gedrueckt'); };
+    knopf.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      try { knopf.setPointerCapture(e.pointerId); } catch (err) { /* egal */ }
+      an();
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture', 'blur'].forEach((n) => knopf.addEventListener(n, aus));
+    knopf.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); an(); } });
+    knopf.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') aus(); });
+    knopf.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  halte($('hoch'), (v) => { hoch = v; });
+  halte($('runter'), (v) => { runter = v; });
+
+  // Tastatur: Pfeile (oder W und S) schwimmen. In der Aufgabe wählen 1–3 oder der Buchstabe die Antwort.
+  window.addEventListener('keydown', (e) => {
+    if ($('spiel').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (phase === 'aufgabe') {
+      const knoepfe = [...$('antworten').children];
+      const zahl = Number(e.key);
+      if (zahl >= 1 && zahl <= knoepfe.length) { knoepfe[zahl - 1].click(); return; }
+      const treffer = knoepfe.find((b) => b.textContent.toLowerCase() === e.key.toLowerCase());
+      if (treffer) { treffer.click(); return; }
+    }
+    const k = e.key.toLowerCase();
+    if (e.key === 'ArrowUp' || (k === 'w' && phase !== 'aufgabe')) { hoch = true; $('hoch').classList.add('gedrueckt'); e.preventDefault(); }
+    if (e.key === 'ArrowDown' || (k === 's' && phase !== 'aufgabe')) { runter = true; $('runter').classList.add('gedrueckt'); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', (e) => {
+    const k = e.key.toLowerCase();
+    if (e.key === 'ArrowUp' || k === 'w') { hoch = false; $('hoch').classList.remove('gedrueckt'); }
+    if (e.key === 'ArrowDown' || k === 's') { runter = false; $('runter').classList.remove('gedrueckt'); }
+  });
+  window.addEventListener('blur', () => {
+    hoch = false; runter = false;
+    $('hoch').classList.remove('gedrueckt'); $('runter').classList.remove('gedrueckt');
+  });
+
+  if (window.ResizeObserver) new ResizeObserver(passeGroesseAn).observe($('meer'));
+  window.addEventListener('resize', passeGroesseAn);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (stimme) stimme.cancel(); hoch = false; runter = false; letzteZeit = 0; }
+  });
+
+  zeigeRekord();
+  // Nach „Nochmal spielen“ soll der Rekord auf dem Start-Bildschirm stimmen, wenn man später zurückkommt.
+  window.addEventListener('pageshow', zeigeRekord);
+})();
+</script>
+</body>
+</html>
