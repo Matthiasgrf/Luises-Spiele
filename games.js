@@ -32,4 +32,11 @@ window.GAMES = [
     age: '6–7 Jahre',
     subject: 'Mathe',
   },
+  {
+    id: 'meerjungfrau-alphabet',
+    title: 'Meerjungfrauen-Alphabet',
+    description: 'Schwimm mit der Meerjungfrau, sammle Muscheln und finde die richtigen Buchstaben.',
+    age: '6–7 Jahre',
+    subject: 'Deutsch',
+  },
 ];
